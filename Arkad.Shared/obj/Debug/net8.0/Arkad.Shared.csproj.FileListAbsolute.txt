@@ -1,0 +1,11 @@
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/bin/Debug/net8.0/Arkad.Shared.deps.json
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/bin/Debug/net8.0/Arkad.Shared.dll
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/bin/Debug/net8.0/Arkad.Shared.pdb
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/obj/Debug/net8.0/Arkad.Shared.GeneratedMSBuildEditorConfig.editorconfig
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/obj/Debug/net8.0/Arkad.Shared.AssemblyInfoInputs.cache
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/obj/Debug/net8.0/Arkad.Shared.AssemblyInfo.cs
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/obj/Debug/net8.0/Arkad.Shared.csproj.CoreCompileInputs.cache
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/obj/Debug/net8.0/Arkad.Shared.dll
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/obj/Debug/net8.0/refint/Arkad.Shared.dll
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/obj/Debug/net8.0/Arkad.Shared.pdb
+/Users/gersondiaz/_Proyectos/Gerson/Arkad/Src/Webapp/Arkad/Arkad.Shared/obj/Debug/net8.0/ref/Arkad.Shared.dll
