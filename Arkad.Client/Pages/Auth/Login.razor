@@ -1,0 +1,438 @@
+﻿@layout LoginLayout
+@page "/auth/login"
+
+@inject HttpClient Http
+@inject IConfiguration configuration
+@inject IJSRuntime jsRuntime
+@inject NavigationManager NavigationManagerInstance
+
+@using Arkad.Client.Shared.Components
+@using Arkad.Shared
+@using Hefesto.Response;
+@using System.Net;
+@using Hefesto.Rut;
+@using Hefesto.Validation;
+@using Microsoft.AspNetCore.Components.Web;
+@using Microsoft.Extensions.FileProviders;
+@using Microsoft.JSInterop;
+@using Newtonsoft.Json;
+@using System.Web;
+@using System.Diagnostics;
+@using Microsoft.AspNetCore.Components.Forms;
+@using Microsoft.Extensions.Configuration;
+@using Microsoft.Extensions.Configuration.Json;
+@using System.Reflection;
+
+<div class="vh-100 d-flex align-items-center ">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-10 offset-lg-1">
+                <div class="shadow rounded border border-white">
+                    <div class="row">
+                        <div class="col-md-5 d-md-none d-sm-inline-flex justify-content-center align-items-center bg-secondary bg-opacity-50 text-center">
+                            <div class="d-flex flex-column justify-content-center align-items-center">
+
+                                <img class="w-75 p-2" src="/img/ckelar-logo.png" />
+
+                                <div>
+                                    <img src="/img/logo_enami_blanco.png" class="w-75 p-2" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-7 pe-0">
+                            <div class="form-left h-100 py-5 px-5">
+                                <EditForm Model="@usuario" OnValidSubmit="@Autenticar">
+
+                                    <input id="clientIp" name="client-ip" type="hidden" @bind-value="@ClientIP" />
+
+                                    <div class="col-12">
+                                        <label>Nombre de Usuario<span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <div class="input-group-text"><i class="fa fa-user"></i></div>
+                                            <input name="nombreUsuario" type="text" class="form-control @usernameInputIsValidClasses" placeholder="Nombre de Usuario" autocomplete="off" autofocus required @bind-value="@UserName" @oninput="UsernameKeyUp">
+                                            @if (usernameIsValid.HasValue && !usernameIsValid.Value)
+                                            {
+                                                <div class="invalid-feedback">
+                                                    @usernameErrMessage
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label>Contraseña<span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <div class="input-group-text"><i class="fa fa-key"></i></div>
+                                            <input name="clave" type="password" class="form-control @passwordInputIsValidClasses" placeholder="Contraseña" required @bind-value="@Password" @oninput="PasswordKeyUp">
+                                            @if (passwordIsValid.HasValue && !passwordIsValid.Value)
+                                            {
+                                                <div class="invalid-feedback">
+                                                    @passwordErrMessage
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @* <div class="col-sm-6">
+                                        <a href="/modulo/core/account/profile/usuario/recuperar" class="text-info">¿Olvidó su contraseña?</a>
+                                    </div> *@
+
+                                    <div class="col-12 text-center">
+                                        <button type="submit" class="btn btn-success px-4 mt-4">
+                                            <i class="fas fa-sign-in-alt"></i> Ingresar
+                                        </button>
+                                    </div>
+                                </EditForm>
+                            </div>
+                        </div>
+                        <div class="col-md-5 d-none d-md-inline-flex justify-content-center align-items-center bg-secondary bg-opacity-50 text-center">
+                            <div class="d-flex flex-column justify-content-center align-items-center">
+
+                                <img class="img-fluid p-2" src="/img/ckelar-logo.png" />
+
+                                <div>
+                                    <img src="/img/logo_enami_blanco.png" class="img-fluid p-2" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    a {
+        text-decoration: none;
+    }
+
+    .form-right i {
+        font-size: 100px;
+    }
+</style>
+
+<ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code
+{
+
+    // Atributos que son utilizados en el formulario
+    public string UserName { get; set; }
+    public string Password { get; set; }
+    public string ClientIP { get; set; }
+    public string clientId { get; set; }
+
+    // Objeto que obtiene la respuesta de Autenticar()
+    private ResponseGenericModel ResponseGenericModel { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    // Objeto para validar el formulario por sus Etieutas de anotación (Si tiene)
+    public Usuario usuario = new Usuario();
+
+    // Atributos para obtener el valor del nombre de usuario y contraseña mientras se escribe
+    private string userNameValue = string.Empty;
+    private string passwordValue = string.Empty;
+
+
+    #region Validación Formulario
+    // Atributos para manejar si el nombre de usuario es válido
+    private bool? usernameIsValid;
+    private string usernameErrMessage = string.Empty;
+    private string usernameInputIsValidClasses => (!usernameIsValid.HasValue) 
+                                                    ? "" 
+                                                    : ((usernameIsValid.HasValue && usernameIsValid.Value) 
+                                                        ? "is-valid" 
+                                                        : "is-invalid");
+
+    // Atributos para manejar si la contraseña es o no válida
+    private bool? passwordIsValid;
+    private string passwordErrMessage = string.Empty;
+    private string passwordInputIsValidClasses => (!passwordIsValid.HasValue)
+                                                    ? ""
+                                                    : ((passwordIsValid.HasValue && passwordIsValid.Value)
+                                                        ? "is-valid"
+                                                        : "is-invalid");
+    #endregion Validación Formulario
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            #region Obtener IP
+            try
+            {
+                ClientIP = await Http.GetStringAsync("https://api.ipify.org");
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine($"Error: {e}");
+            }
+            #endregion Obtener IP
+
+            StateHasChanged(); // Forzar renderizado
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page de forma asincrona
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    /// <summary>
+    /// Verifica mientras se escribe si el nombre de usuario cumple con los requisitos
+    /// </summary>
+    /// <param name="e"></param>
+    private void UsernameKeyUp(ChangeEventArgs e)
+    {
+        try
+        {
+            userNameValue = e?.Value?.ToString();
+
+            #if (DEBUG)
+    Debug.WriteLine($"Username: {userNameValue}");
+    jsRuntime.InvokeVoidAsync("console.log", $"Username: {userNameValue}");
+            #endif
+
+            if (!String.IsNullOrEmpty(userNameValue))
+            {
+                if (DataTypeValidation.checkEmailAddress(userNameValue))
+                {
+                    usernameIsValid = true;
+                    usernameErrMessage = string.Empty;
+                }
+                // else if (Rut.validar(userNameValue))
+                // {
+                //     UserName = Rut.formatRutChile(userNameValue);
+                //     usernameIsValid = true;
+                //     usernameErrMessage = string.Empty;
+                // }
+                else if (!userNameValue.Contains("@"))
+                {
+                    usernameIsValid = false;
+                    usernameErrMessage = "El nombre de usuario no es un correo electrónico válido.";
+                }
+                else
+                {
+                    usernameIsValid = false;
+                    usernameErrMessage = "El nombre de usuario no es un RUN ni Correo electrónico válido.";
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+            #if (DEBUG)
+    Debug.WriteLine($"Error Username: {ex}");
+    jsRuntime.InvokeVoidAsync("console.log", $"Error Username: {ex}");
+            #endif
+        }
+    }
+
+    //// <summary>
+    /// Verifica mientras se escribe si la contraseña cumple con los requisitos
+    /// </summary>
+    /// <param name="e"></param>
+    private void PasswordKeyUp(ChangeEventArgs e)
+    {
+        try
+        {
+            passwordValue = e?.Value?.ToString();
+
+            #if (DEBUG)
+    Debug.WriteLine($"Contraseña: {passwordValue}");
+    jsRuntime.InvokeVoidAsync("console.log", $"Contraseña: {passwordValue}");
+            #endif
+
+            if (!String.IsNullOrEmpty(passwordValue)
+                && passwordValue.Length > 3)
+            {
+                passwordIsValid = true;
+                passwordErrMessage = string.Empty;
+            }
+            else
+            {
+                passwordIsValid = false;
+                passwordErrMessage = "La contraseña no puede ser menor a 4 caracteres.";
+            }
+        }
+        catch (Exception ex)
+        {
+            #if (DEBUG)
+    Debug.WriteLine($"Error Contraseña: {ex}");
+    jsRuntime.InvokeVoidAsync("console.log", $"Error Contraseña: {ex}");
+            #endif
+        }
+    }
+
+    #region Autenticar
+    /// <summary>
+    /// Función que valida la integridad de los datos y realiza la autenticación en el servidor
+    /// </summary>
+    /// <returns></returns>
+    public async Task Autenticar()
+    {
+        if (String.IsNullOrEmpty(UserName))
+        {
+            usernameIsValid = false;
+            Title = "Error Usuario";
+            Message = "El nombre de usuario es obligatorio!";
+            await ModalsComponent.ShowAlertModal();
+        }
+        else if (!DataTypeValidation.checkEmailAddress(UserName)
+                /* && !Rut.validar(UserName) */)
+        {
+            usernameIsValid = false;
+            Title = "Error Usuario";
+            Message = "El nombre de usuario no es válido!";
+            await ModalsComponent.ShowAlertModal();
+        }
+        else if (String.IsNullOrEmpty(Password))
+        {
+            passwordIsValid = false;
+            Title = "Error Contraseña";
+            Message = "La contraseña es obligatoria!";
+            await ModalsComponent.ShowAlertModal();
+        }
+        else if (Password.Length < 4)
+        {
+            passwordIsValid = false;
+            Title = "Error Usuario";
+            Message = "La contraseña no puede ser de menos de 4 caracteres!";
+            await ModalsComponent.ShowAlertModal();
+        }
+        else
+        {
+            TitleLoading = "Validando usuario...";
+            await ModalsComponent.ShowLoadingModal(true);
+
+            List<Object> data = new List<object>();
+            var httpStatusCode = HttpStatusCode.OK;
+
+            try
+            {
+                var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("nombreUsuario", UserName),
+                                    new KeyValuePair<string, string>("clave", Password)
+                                };
+                var content = new FormUrlEncodedContent(formData);
+
+                #if (DEBUG)
+        Debug.WriteLine($"ClientId: {clientId}");
+        Debug.WriteLine($"UserName: {UserName}");
+        Debug.WriteLine($"Password: {Password}");
+
+        await jsRuntime.InvokeVoidAsync("console.log", $"ClientId: {clientId}");
+        await jsRuntime.InvokeVoidAsync("console.log", $"UserName: {UserName}");
+        await jsRuntime.InvokeVoidAsync("console.log", $"Password: {Password}");
+                #endif
+
+                var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManagerInstance.BaseUri}api/auth/Authorization/v1/login");
+                request.Headers.Add("clientId", clientId);
+                request.Headers.Add("client-ip", ClientIP);
+                request.Content = content;
+
+                var httpResponse = await Http.SendAsync(request);
+                var responseString = await httpResponse.Content.ReadAsStringAsync();
+                ResponseGenericModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+                Debug.WriteLine($"Response: {responseString}");
+                await jsRuntime.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+                if (ResponseGenericModel.status != StatusResponseCodes.StatusResponseSuccess)
+                {
+                    Title = ResponseGenericModel.subject;
+                    Message = ResponseGenericModel.message;
+
+                    await jsRuntime.InvokeVoidAsync("alert", $"Error: {Message}");
+                }
+                else
+                {
+                    Title = ResponseGenericModel.subject;
+                    Message = ResponseGenericModel.message;
+                    LoginRespData loginData = JsonConvert.DeserializeObject<LoginRespData>(ResponseGenericModel.data.ToString());
+
+                    await LocalStorageComponent.Save(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, loginData.Authorization);
+                    await LocalStorageComponent.Save("userName", loginData.usuario.Nombre);
+                    await LocalStorageComponent.Save("userEmail", loginData.usuario.Correo);
+                    await LocalStorageComponent.Save("userRol", loginData.usuario.Rol);
+
+                    await LoginSuccessRedirect(ResponseGenericModel.urlRedirect);
+                }
+            }
+            catch (Exception e)
+            {
+                Title = "Error";
+                Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+                Debug.WriteLine($"Error: {e}");
+                await jsRuntime.InvokeVoidAsync("console.log", $"Error: {e}");
+            }
+
+            await Task.Delay(1000);
+            await ModalsComponent.ShowLoadingModal(false);
+        }
+    }
+
+    /// <summary>
+    /// Modelo que represeta la respuesta de autenticación en el servidor
+    /// </summary>
+    public class LoginRespData
+    {
+        public Usuario usuario { get; set; }
+        public string Authorization { get; set; }
+    }
+
+    public class Usuario
+    {
+        [JsonProperty("Nombre")]
+        public string Nombre;
+
+        [JsonProperty("Correo")]
+        public string Correo;
+
+        [JsonProperty("FUltimaConexion")]
+        public DateTime FUltimaConexion;
+
+        [JsonProperty("Rol")]
+        public string Rol;
+    }
+
+    /// <summary>
+    /// Redirecciona tras validar el inicio de sesión
+    /// </summary>
+    /// <param name="redirectUrl"></param>
+    /// <returns></returns>
+    public async Task LoginSuccessRedirect(string redirectUrl)
+    {
+        await jsRuntime.InvokeVoidAsync("closeAllModal", null);
+        NavigationManagerInstance.NavigateTo(redirectUrl);
+    }
+    #endregion Autenticar
+}

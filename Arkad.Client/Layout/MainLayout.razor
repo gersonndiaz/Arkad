@@ -224,7 +224,7 @@
             await Task.Delay(200);
             if (String.IsNullOrEmpty(Authorization))
             {
-                //NavigationManagerInstance.NavigateTo("/auth/login");
+                NavigationManagerInstance.NavigateTo("/auth/login");
             }
 
             await JS.InvokeVoidAsync("googleTranslateElementInit", null);

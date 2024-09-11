@@ -55,14 +55,14 @@
 
     <script>
         $(document).ready(function () {
-            // //var value = sessionStorage.getItem('Authorization');
-            // var value = localStorage.getItem('Authorization');
-            // var currentUrl = window.location.pathname;
+             //var value = sessionStorage.getItem('Authorization');
+             var value = localStorage.getItem('Authorization');
+             var currentUrl = window.location.pathname;
 
-            // // Evitar redirección en la página de login y en URLs que inician con "/error"
-            // if (value === null && currentUrl !== '/auth/login' && !currentUrl.startsWith('/error')) {
-            //     window.location.href = '/auth/login';
-            // }
+             // Evitar redirección en la página de login y en URLs que inician con "/error"
+             if (value === null && currentUrl !== '/auth/login' && !currentUrl.startsWith('/error')) {
+                 window.location.href = '/auth/login';
+             }
         });
     </script>
 
