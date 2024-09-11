@@ -17,4 +17,16 @@
     <ProjectReference Include="..\Arkad.Shared\Arkad.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+		<EmbeddedResource Include="wwwroot\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Update="wwwroot\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
 </Project>

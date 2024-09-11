@@ -2,17 +2,32 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Arkad.Client</title>
+    <meta charset="utf-8">
+    <link rel="shortcut icon" type="image/png" href="/img/icono.png" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Ckelar Software SpA, Gerson Díaz">
+    <meta name="keywords" content="">
+
     <base href="/" />
-    <link rel="stylesheet" href="css/app.css" />
-    <!-- If you add any scoped CSS files, uncomment the following to load them
-    <link href="Arkad.Client.styles.css" rel="stylesheet" /> -->
+    <link href="css/app.css" rel="stylesheet" />
+
+    <title>Arkad</title>
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="/plugins/bootstrap/css/bootstrap.min.css">
+
+    <link rel="stylesheet" href="/plugins/fontawesome/css/all.min.css" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <link href="/themes/adminkit/css/app.css" rel="stylesheet">
+    <link href="/themes/adminkit/css/dark.css" rel="stylesheet">
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" data-theme="dark">
         <svg class="loading-progress">
             <circle r="40%" cx="50%" cy="50%" />
             <circle r="40%" cx="50%" cy="50%" />
@@ -26,6 +41,209 @@
         <a class="dismiss">🗙</a>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
+
+    <script src="/plugins/jquery/jquery-3.6.3.min.js"></script>
+    <script src="/plugins/jquery/ui/jquery-ui.min.js"></script>
+    <script src="/plugins/jquery/jquery.ui.touch-punch.min.js"></script>
+
+    <script src="/plugins/jquery/popper.min.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="/plugins/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/plugins/jquery/jquery.rut.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // //var value = sessionStorage.getItem('Authorization');
+            // var value = localStorage.getItem('Authorization');
+            // var currentUrl = window.location.pathname;
+
+            // // Evitar redirección en la página de login y en URLs que inician con "/error"
+            // if (value === null && currentUrl !== '/auth/login' && !currentUrl.startsWith('/error')) {
+            //     window.location.href = '/auth/login';
+            // }
+        });
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            $("input.rut").rut({
+                formatOn: 'change keyup',
+                minimumLength: 8,
+                validateOn: 'change'
+            });
+        });
+
+        function rutFormatter(element) {
+            console.log('Original: ' + element.value);
+            var v = $.formatRut(element.value);
+            console.log('Formateado: ' + v);
+            $('#' + element.id).val(v);
+        }
+    </script>
+
+    <script src="/themes/adminkit/js/app.js"></script>
+
+    <script src="plugins/chartjs/chart.min.js"></script>
+
+    <script src="js/chartUtils.js"></script>
+
+    <script src="/plugins/jquery/custom-ckelarsoftwre.js"></script>
+    <script src="/plugins/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
+
+    <link rel="stylesheet" href="plugins/mobile-drag-drop@2.3.0-rc.2/default.css" />
+    <script src="plugins/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+
+
+    <!-- Poper -->
+    <script>
+        function initializePopovers() {
+            var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+            var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+                return new bootstrap.Popover(popoverTriggerEl);
+            });
+
+            const popover = new bootstrap.Popover('.popover-dismiss', {
+                trigger: 'focus'
+            });
+        }
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            setInterval(function () {
+                //console.log('buscando body translate');
+                var iframeBody = jQuery("iframe").contents().find("body");
+                $(iframeBody).attr('style', 'overflow: scroll !important');
+            }, 1000);
+        });
+    </script>
+
+    <script>
+        function initializeAdminKit() {
+            var sidebar = document.querySelector('.sidebar');
+            var sidebarToggle = document.querySelector('.sidebar-toggle');
+
+            if (sidebarToggle && sidebar) {
+                sidebarToggle.addEventListener('click', function () {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+        }
+    </script>
+
+    <script>
+        function initializeSortable() {
+            $("#sortable").sortable({
+                handle: ".alert-primary",
+                update: function (event, ui) {
+                    console.log("Order updated");
+                }
+            });
+            $("#sortable").disableSelection();
+        }
+
+        function getSortableOrder() {
+            return $("#sortable").sortable("toArray", { attribute: "data-id" });
+        }
+
+        function preventDefaultDragOver(event) {
+            event.preventDefault();
+        }
+
+        function closeOffcanvas(offcanvasId) {
+            var offcanvasElement = document.getElementById(offcanvasId);
+            var offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasElement);
+            if (offcanvasInstance) {
+                offcanvasInstance.hide();
+            }
+
+            // Eliminar los backdrop manualmente
+            setTimeout(function () {
+                var backdrops = document.querySelectorAll('.offcanvas-backdrop');
+                backdrops.forEach(function (backdrop) {
+                    backdrop.parentNode.removeChild(backdrop);
+                });
+            }, 300); // Esperar un poco para que la animación termine antes de eliminar los backdrop
+        }
+
+    </script>
+
+    <script>
+        // options are optional ;)
+        MobileDragDrop.polyfill({
+            // use this to make use of the scroll behaviour
+            dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+        });
+    </script>
+
+    <!--#region Google Translate-->
+    <!--<script type="text/javascript">
+        function googleTranslateElementInit() {
+            try {
+                new google.translate.TranslateElement({ pageLanguage: 'es', includedLanguages: 'en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE }, 'google_translate_element');
+            }
+            catch
+            { }
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>-->
+
+    <style>
+        div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value span:nth-of-type(1), div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value span:nth-of-type(2), div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value span:nth-of-type(3) {
+            display: none;
+        }
+
+        div#google_translate_element div.goog-te-gadget-simple {
+            margin: 0px;
+            padding: 10px;
+            display: inline-block;
+            background-color: #0d6efd;
+            border: 1px solid #0d6efd;
+            border-radius: 5px 5px;
+            width: 100%;
+            text-align: center;
+        }
+
+        div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value {
+            color: white;
+        }
+
+        div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value::after {
+            content: "Traducir";
+            padding-right: 5px;
+        }
+
+        div#google_translate_element div.goog-te-gadget-simple img:nth-of-type(1) {
+            display: none;
+        }
+    </style>
+    <!--#endregion Google Translate-->
+
+
+    <style>
+        /* Añade este CSS */
+        .wrapper {
+            display: flex;
+            height: 100vh; /* Ocupa la altura completa de la pantalla */
+            overflow: hidden;
+        }
+
+        .sidebar {
+            height: 100vh; /* Asegura que el sidebar ocupe la altura completa */
+            position: sticky; /* Fija la posición para evitar que se mueva */
+            overflow-y: auto; /* Permite el scroll vertical */
+            overflow-x: hidden;
+        }
+
+        .main {
+            flex-grow: 1;
+            overflow-y: auto;
+            height: 100vh;
+            padding-bottom: 0; /* Ajusta el padding si es necesario */
+        }
+    </style>
 </body>
 
 </html>
