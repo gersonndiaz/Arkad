@@ -1,0 +1,136 @@
+﻿
+@using Arkad.Client.Shared.Components
+@using Hefesto.Response;
+@using System.Diagnostics;
+@using Newtonsoft.Json;
+@using System.Reflection;
+@inherits LayoutComponentBase
+
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManagerInstance
+
+<div class="wrapper">
+    <div class="main">
+        <!--#region Navigation-->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+            <div class="container">
+                <a class="navbar-brand" href="/">
+                    <img src="/img/logo-dark.png" class="img-fluid" style="max-height: 50px;" />
+                </a>
+            </div>
+
+            <div class="contaier text-end">
+                <div id="google_translate_element" class="dropdown"></div>
+            </div>
+        </nav>
+        <!--#endregion Navigation-->
+
+
+        <main class="content">
+            <div class="container-fluid p-0">
+
+                @Body
+
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container-fluid">
+                <div class="row text-muted">
+                    <div class="col-6 text-start">
+                        <p class="mb-0">
+                            <a class="text-muted" href="https://www.ckelar.cl/" target="_blank"><strong>&copy; Ckelar Software SpA @AppAnio. Todos los derechos reservados.</strong></a>
+                        </p>
+                    </div>
+                    <div class="col-6 text-end">
+                        Versión @AppVersion
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<style>
+    @@media (max-width: 767px) {
+        main.content {
+            margin-top: 60px;
+        }
+    }
+</style>
+<style>
+    div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value span:nth-of-type(1), div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value span:nth-of-type(2), div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value span:nth-of-type(3) {
+        display: none;
+    }
+
+    div#google_translate_element div.goog-te-gadget-simple {
+        margin: 0px;
+        padding: 10px;
+        display: inline-block;
+        background-color: #0d6efd;
+        border: 1px solid #0d6efd;
+        border-radius: 100px 100px;
+    }
+
+    div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value {
+        color: white;
+    }
+
+    div#google_translate_element div.goog-te-gadget-simple a.goog-te-menu-value::after {
+        content: "Traducir";
+        padding-right: 5px;
+    }
+
+    div#google_translate_element div.goog-te-gadget-simple img:nth-of-type(1) {
+        display: none;
+    }
+</style>
+
+
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code {
+    private string Authorization { get; set; }
+
+    private string AppVersion { get; set; }
+    private string AppAnio { get; set; }
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page de forma asincrona
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        AppAnio = "2024";
+
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("googleTranslateElementInit", null);
+
+            Authorization = await LocalStorageComponent.Get("Authorization");
+            await Task.Delay(200);
+            if (!String.IsNullOrEmpty(Authorization))
+            {
+                NavigationManagerInstance.NavigateTo("/");
+            }
+
+            StateHasChanged(); // Forzar renderizado
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

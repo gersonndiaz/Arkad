@@ -1,0 +1,181 @@
+﻿@inject IJSRuntime JS
+
+@using Hefesto.Response;
+@using Microsoft.JSInterop;
+
+<!--#region Modal Loading -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="loadingModalLabel">
+                    @if (!String.IsNullOrEmpty(TitleLoading))
+                    {
+                        @TitleLoading
+                    }
+                    else
+                    {
+                        <span>Cargando información...</span>
+                    }
+                </h5>
+            </div>
+            <div class="modal-body w-100 text-center">
+                <div class="spinner-grow text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+<!--#endregion Modal Loading -->
+<!--#region Modal Alert Message -->
+<div class="modal fade" id="alertMessageModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="alertMessageModalLabel">
+                    @if (!String.IsNullOrEmpty(TitleAlert))
+                    {
+                        @TitleAlert
+                    }
+                </h5>
+            </div>
+            <div id="alertMessageModalBody" class="modal-body w-100 text-center">
+                @if (!String.IsNullOrEmpty(MessageAlert))
+                {
+                    @MessageAlert
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary right" type="button" data-bs-dismiss="modal" aria-label="Close" onclick="closeAllModal();">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--#endregion Modal Alert Message -->
+<!--#region Modal Cerrar Sesión -->
+<div class="modal fade" id="cerrarSesionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cerrarSesionModalLabel">Cerrar sesión</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-black-50 text-center">
+                ¿Realmente deseas cerrar tú sesión actual?
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger right" type="button" @onclick="ClearAllSessionStorage">Salir</button>
+                <button class="btn btn-secondary right" type="button" data-bs-dismiss="modal" aria-label="Close" onclick="closeAllModal();">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--#endregion Modal Cerrar Sesión -->
+<!--#region Modal Cerrar o Seguir en Sesión -->
+<div class="modal fade" id="expirarSesionModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="expirarSesionModalLabel">Sesión próxima a expirar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-black-50 text-center">
+                Su sesión está próxima a expirar. ¿Desea continuar utilizando la plataforma?
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success right" type="button" data-bs-dismiss="modal" aria-label="Close" onclick="updateTimeSesion();">
+                    Continuar
+                </button>
+                <button class="btn btn-danger right" type="button" data-bs-dismiss="modal" aria-label="Close" onclick="openModalCloseSesion();">
+                    Salir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!--#endregion Modal Cerrar o Seguir en Sesión -->
+<!--#region Notificaciones -->
+<div id="divToastNotificacion" class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+
+            <img src="@ProyectoIcono" class="rounded me-2" style="max-width:50px;" />
+
+            <strong id="toastTitle" class="me-auto"></strong>
+            <small id="toastTimelapse"></small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div id="toastMessage" class="toast-body"></div>
+    </div>
+</div>
+<!--#endregion Notificaciones -->
+@code {
+    [Parameter]
+    public string TitleLoading { get; set; }
+    [Parameter]
+    public string MessageLoading { get; set; }
+    [Parameter]
+    public string TitleAlert { get; set; }
+    [Parameter]
+    public string MessageAlert { get; set; }
+    [Parameter]
+    public string ProyectoIcono { get; set; }
+
+    /// <summary>
+    /// Permite abrir el Modal de Cargando
+    /// </summary>
+    /// <param name="show"></param>
+    /// <returns></returns>
+    public async Task ShowLoadingModal(bool show)
+    {
+        if (show)
+        {
+            await JS.InvokeVoidAsync("openModal", $"loadingModal");
+        }
+        else
+        {
+            //ShowLoading = false;
+            await JS.InvokeVoidAsync("closeAllModal");
+        }
+    }
+
+    /// <summary>
+    /// Permite abrir el Modal de Alerta
+    /// </summary>
+    /// <returns></returns>
+    public async Task ShowAlertModal()
+    {
+        //ShowAlert = true;
+        await JS.InvokeVoidAsync("openModal", $"alertMessageModal");
+
+        // Crear un temporizador para ocultar el modal después de 5 segundos
+        var timer = new System.Timers.Timer(3000);
+        timer.Elapsed += (sender, e) =>
+        {
+            //ShowAlert = false;
+            JS.InvokeVoidAsync("closeAllModal", null);
+            StateHasChanged();
+        };
+        timer.AutoReset = false;
+        timer.Enabled = true;
+    }
+
+    /// <summary>
+    /// Función que permite eliminar las sessionstorages para cerrar sesión
+    /// </summary>
+    /// <returns></returns>
+    private async Task ClearAllSessionStorage()
+    {
+        // Limpiar el sessionStorage
+        await JS.InvokeVoidAsync("sessionStorage.clear");
+
+        // Limpiar el localStorage
+        await JS.InvokeVoidAsync("localStorage.clear");
+
+        // Recargar la página
+        await JS.InvokeVoidAsync("location.reload");
+    }
+}

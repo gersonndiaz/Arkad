@@ -1,0 +1,151 @@
+﻿@using System.Globalization
+@using Arkad.Shared.Models
+
+<div class="average-builder">
+    <div class="items-container">
+        <h4>Items:</h4>
+        @foreach (var item in Items)
+        {
+            <div class="clickable-item" @onclick="@(() => AddToAverage(item))">
+                @item.Nombre
+            </div>
+        }
+    </div>
+
+    <div class="average-container">
+        <h4>Elementos Seleccionados para Promedio:</h4>
+        @foreach (var item in SelectedItems.Select((item, index) => new { item, index }))
+        {
+            <div class="average-item" @onclick="@(() => RemoveFromAverage(item.index))">
+                @item.item.DisplayName
+            </div>
+        }
+    </div>
+
+    <div class="average-result">
+        <h4>Fórmula visible:</h4>
+        <input type="text" class="form-control" readonly value="@FormulaStringAux" />
+
+        <h4>Fórmula para cálculo:</h4>
+        <input type="text" class="form-control" readonly value="@FormulaString" />
+
+        @* <h4>Resultado de prueba:</h4>
+        <input type="text" class="form-control" readonly value="@FormulaTest" /> *@
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string FormulaString { get; set; }  // Para la búsqueda en la DB
+
+    [Parameter]
+    public string FormulaStringAux { get; set; } // Para la visualización amigable
+
+    [Parameter]
+    public string FormulaTest { get; set; }  // Para el mensaje de validación
+
+    [Parameter]
+    public List<Item> Items { get; set; }
+
+    [Parameter]
+    public EventCallback<string> FormulaStringChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> FormulaStringAuxChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> FormulaTestChanged { get; set; }
+
+    private List<(string Id, string DisplayName)> SelectedItems = new List<(string, string)>();
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(FormulaString))
+        {
+            SelectedItems = FormulaString.Split(' ')
+                                         .Select(x => (x, x))
+                                         .ToList();
+            UpdateAverageStrings();
+        }
+    }
+
+    private async Task AddToAverage(Item item)
+    {
+        SelectedItems.Add(($"[{item.Id}]", $"[{item.Nombre}]"));
+        await UpdateAverageStrings();
+    }
+
+    private async Task RemoveFromAverage(int index)
+    {
+        if (index >= 0 && index < SelectedItems.Count)
+        {
+            SelectedItems.RemoveAt(index);
+            await UpdateAverageStrings();
+        }
+    }
+
+    private async Task UpdateAverageStrings()
+    {
+        if (SelectedItems.Count == 0)
+        {
+            FormulaString = "N/A";
+            FormulaStringAux = "N/A";
+            FormulaTest = "N/A";
+        }
+        else
+        {
+            FormulaString = string.Join(" + ", SelectedItems.Select(f => f.Id));
+            FormulaStringAux = string.Join(" + ", SelectedItems.Select(f => f.DisplayName));
+
+            // Simulación de cálculo de promedio
+            Random random = new Random();
+            double sum = 0;
+            List<string> itemValues = new List<string>();
+
+            foreach (var item in SelectedItems)
+            {
+                double randomValue = Math.Round(random.NextDouble() * 100, 3);
+                itemValues.Add($"{item.DisplayName} = {randomValue.ToString("F3", CultureInfo.InvariantCulture)}");
+                sum += randomValue;
+            }
+
+            double average = Math.Round(sum / SelectedItems.Count, 3);
+            FormulaTest = $"[OK] - Promedio simulado: {average.ToString("F3", CultureInfo.InvariantCulture)} (Valores: {string.Join(", ", itemValues)})";
+        }
+
+        await FormulaStringChanged.InvokeAsync(FormulaString);
+        await FormulaStringAuxChanged.InvokeAsync(FormulaStringAux);
+        await FormulaTestChanged.InvokeAsync(FormulaTest);
+    }
+}
+
+<style>
+    .average-builder {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .items-container, .average-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    .clickable-item, .average-item {
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .average-item:hover {
+        background-color: #f8d7da;
+        cursor: pointer;
+    }
+
+    .average-container {
+        min-height: 50px;
+    }
+</style>

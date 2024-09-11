@@ -1,0 +1,27 @@
+﻿@inject IJSRuntime JSRuntime
+
+@code {
+
+    public async Task Save(string name, string data)
+    {
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", name, data);
+        //await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", name, data);
+    }
+
+    public async Task<string> Get(string name)
+    {
+        return await JSRuntime.InvokeAsync<string>("localStorage.getItem", name);
+        //return await JSRuntime.InvokeAsync<string>("sessionStorage.getItem", name);
+    }
+
+    public async Task SaveLocal(string name, string data)
+    {
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", name, data);
+    }
+
+    public async Task<string> GetLocal(string name)
+    {
+        return await JSRuntime.InvokeAsync<string>("localStorage.getItem", name);
+    }
+
+}

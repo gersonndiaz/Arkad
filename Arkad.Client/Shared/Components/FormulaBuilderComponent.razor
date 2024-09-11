@@ -1,0 +1,188 @@
+﻿@using System.Text.Json
+@using Arkad.Shared.Models
+@using Arkad.Shared.Utils.Formula
+@using NCalc
+@using System.Globalization
+
+@inject IJSRuntime JS
+
+<div class="formula-builder">
+    <div class="items-container">
+        <h4>Items:</h4>
+        @foreach (var item in Items)
+        {
+            <div class="clickable-item" @onclick="@(() => AddToFormula(item, true))">
+                @item.Nombre
+            </div>
+        }
+    </div>
+
+    <div class="operators-container">
+        <h4>Operadores:</h4>
+        @foreach (var op in AvailableOperators)
+        {
+            <div class="clickable-item" @onclick="@(() => AddOperatorToFormula(op, false))">
+                @op.Content
+            </div>
+        }
+    </div>
+
+    <div class="numbers-container">
+        <h4>Agregar Número:</h4>
+        <input type="number" class="form-control" @bind="NewNumber" placeholder="Ingresa un número" />
+        <button class="btn btn-primary mt-2" type="button" @onclick="AddNumberToFormula">Agregar Número</button>
+    </div>
+
+    <div class="formula-container">
+        <h4>Fórmula:</h4>
+        @foreach (var item in Formula.Select((item, index) => new { item, index }))
+        {
+            <div class="formula-item" @onclick="@(() => RemoveFromFormula(item.index))">
+                @item.item.DisplayName
+            </div>
+        }
+    </div>
+
+    <div class="formula-result">
+        <h4>Fórmula resultante (visible):</h4>
+        <input type="text" class="form-control" readonly value="@FormulaStringAux" />
+
+        <h4>Fórmula resultante (para cálculos):</h4>
+        <input type="text" class="form-control" readonly value="@FormulaString" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string FormulaString { get; set; }
+
+    [Parameter]
+    public string FormulaStringAux { get; set; }
+
+    [Parameter]
+    public string FormulaTest { get; set; }
+
+    [Parameter]
+    public List<Item> Items { get; set; }
+
+    [Parameter]
+    public EventCallback<string> FormulaStringChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> FormulaStringAuxChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<string> FormulaTestChanged { get; set; }
+
+    [Parameter]
+    public List<FormulaItem> AvailableOperators { get; set; }
+
+    private List<(string Id, string DisplayName)> Formula = new List<(string, string)>();
+
+    private string NewNumber { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(FormulaString))
+        {
+            Formula = FormulaString.Split(' ').Select(x => (x, x)).ToList();
+            FormulaStringAux = string.Join(" ", Formula.Select(f => f.DisplayName));
+        }
+    }
+
+    private async Task AddToFormula(Item item, bool isItem)
+    {
+        Formula.Add(($"[{item.Id}]", $"[{item.Nombre}]"));
+        await UpdateFormulaString();
+    }
+
+    private async Task AddOperatorToFormula(FormulaItem item, bool isItem)
+    {
+        Formula.Add((item.Content, item.Content));
+        await UpdateFormulaString();
+    }
+
+    private async Task AddNumberToFormula()
+    {
+        if (!string.IsNullOrEmpty(NewNumber))
+        {
+            Formula.Add((NewNumber, NewNumber));
+            NewNumber = string.Empty; // Limpiar el campo de entrada
+            await UpdateFormulaString();
+        }
+    }
+
+    private async Task RemoveFromFormula(int index)
+    {
+        if (index >= 0 && index < Formula.Count)
+        {
+            Formula.RemoveAt(index);
+            await UpdateFormulaString();
+        }
+    }
+
+    private async Task UpdateFormulaString()
+    {
+        FormulaString = string.Join(" ", Formula.Select(f => f.Id));
+        FormulaStringAux = string.Join(" ", Formula.Select(f => f.DisplayName));
+
+        TestValidation();
+
+        await FormulaStringChanged.InvokeAsync(FormulaString);
+        await FormulaStringAuxChanged.InvokeAsync(FormulaStringAux);
+        await FormulaTestChanged.InvokeAsync(FormulaTest);
+    }
+
+    /// <summary>
+    /// Función para informar el resultado de la validación de la expresión matemática
+    /// </summary>
+    public void TestValidation()
+    {
+        try
+        {
+            string result = FormulaUtil.ValidateAndReplaceFormula(FormulaString);
+            Console.WriteLine($"Fórmula validada y reemplazada: {result}");
+
+            //FormulaTest = $"[OK]: {result}";
+            FormulaTest = $"{result}";
+        }
+        catch (Exception ex)
+        {
+            FormulaTest = $"[ERROR]: {ex.Message}";
+            Console.WriteLine($"Error en la validación de la fórmula: {ex.Message}");
+        }
+    }
+}
+
+<style>
+    .formula-builder {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .items-container, .operators-container, .numbers-container, .formula-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    .clickable-item, .formula-item {
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .formula-item:hover {
+        background-color: #f8d7da;
+        cursor: pointer;
+    }
+
+    .formula-container {
+        min-height: 50px;
+    }
+</style>

@@ -1,3 +1,241 @@
-﻿@inherits LayoutComponentBase
+﻿@inject IJSRuntime JS
+@inject NavigationManager NavigationManagerInstance
 
-@Body
+@using Arkad.Client.Shared.Components
+@using Microsoft.JSInterop;
+@inherits LayoutComponentBase
+
+<div class="wrapper">
+    <nav id="sidebar" class="sidebar js-sidebar d-print-none">
+        <div class="sidebar-content js-simplebar">
+            <a class="sidebar-brand" href="/">
+                <img src="/img/logo-dark.png" class="img-fluid" />
+                <div class="text-center">
+                    <img src="/img/ckelar-logo-dark.png" style="height: 30px; max-height: 30px; min-height: 30px;" />
+                </div>
+            </a>
+
+            <hr style="border: 0.5px solid !important;" />
+
+            <ul class="sidebar-nav">
+                <li>
+                    <a href="/" class="sidebar-link">
+                        <span class="align-middle"><i class="fa-solid fa-chart-line"></i> Dashboard</span>
+                    </a>
+                </li>
+                @if (UserRol is null)
+                {
+                }
+                else
+                {
+                    if (UserRol.Equals("SYSADMIN", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        <li>
+                            <a href="/indicador/accidente" class="sidebar-link">
+                                <span class="align-middle"><i class="fa-solid fa-table-cells"></i> Indicadores</span>
+                            </a>
+
+                            <a data-bs-target="#menu-gestion" data-bs-toggle="collapse" class="sidebar-link" aria-expanded="false">
+                                <span class="align-middle"><i class="fa-solid fa-list-check"></i> Gestión</span>
+                            </a>
+
+                            <ul id="menu-gestion" class="sidebar-dropdown list-unstyled collapse show" data-bs-parent="#sidebar">
+                                <li class="sidebar-item active">
+                                    <a class="sidebar-link" href="/gestion/faena">Reparticiones</a>
+                                </li>
+                                <li class="sidebar-item active">
+                                    <a class="sidebar-link" href="/gestion/itemizado">Itemizado</a>
+                                </li>
+                                <li class="sidebar-item active">
+                                    <a class="sidebar-link" href="/gestion/periodo">Periodos</a>
+                                </li>
+                                <li class="sidebar-item active">
+                                    <a class="sidebar-link" href="/gestion/usuarios">Usuarios</a>
+                                </li>
+                            </ul>
+
+                            <a href="/reportes/reporte" class="sidebar-link">
+                                <span class="align-middle"><i class="fa-solid fa-magnifying-glass-chart"></i> Reportes</span>
+                            </a>
+                        </li>
+                    }
+                    else if (UserRol.Equals("ADMIN", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        <li>
+                            <a href="/indicador/accidente" class="sidebar-link">
+                                <span class="align-middle"><i class="fa-solid fa-table-cells"></i> Indicadores</span>
+                            </a>
+
+                            <a data-bs-target="#menu-gestion" data-bs-toggle="collapse" class="sidebar-link" aria-expanded="false">
+                                <span class="align-middle"><i class="fa-solid fa-list-check"></i> Gestión</span>
+                            </a>
+
+                            <ul id="menu-gestion" class="sidebar-dropdown list-unstyled collapse show" data-bs-parent="#sidebar">
+                                <li class="sidebar-item active">
+                                    <a class="sidebar-link" href="/gestion/faena">Reparticiones</a>
+                                </li>
+                                <li class="sidebar-item active">
+                                    <a class="sidebar-link" href="/gestion/itemizado">Itemizado</a>
+                                </li>
+                                <li class="sidebar-item active">
+                                    <a class="sidebar-link" href="/gestion/periodo">Periodos</a>
+                                </li>
+                                <li class="sidebar-item active">
+                                    <a class="sidebar-link" href="/gestion/usuarios">Usuarios</a>
+                                </li>
+                            </ul>
+
+                            <a href="/reportes/reporte" class="sidebar-link">
+                                <span class="align-middle"><i class="fa-solid fa-magnifying-glass-chart"></i> Reportes</span>
+                            </a>
+                        </li>
+                    }
+                    else if (UserRol.Equals("USER", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        <li>
+                            <a href="/indicador/accidente" class="sidebar-link">
+                                <span class="align-middle"><i class="fa-solid fa-table-cells"></i> Indicadores</span>
+                            </a>
+
+                            <a href="/reportes/reporte" class="sidebar-link">
+                                <span class="align-middle"><i class="fa-solid fa-magnifying-glass-chart"></i> Reportes</span>
+                            </a>
+                        </li>
+                    }
+                }
+            </ul>
+
+            <div class="sidebar-aux">
+                <hr />
+                <div class="sidebar-aux-content text-center">
+                    <strong class="d-inline-block mb-2 text-secondary">
+                        Arkad
+                    </strong>
+                    <div class="mb-3 text-sm text-secondary">
+                        <strong>Arkad</strong> es una plataforma desarrollada por <a href="https://www.ckelar.cl/" target="_blank"><strong>Ckelar Software SpA</strong></a>.
+
+                        <div class="row mt-1">
+                            <div class="col-sm-12 col-md-6 offset-md-3 align-self-center">
+                                <img src="/img/ckelar-logo.png" class="img-fluid p-1" style="background-color: white; border-radius: 100px 100px 10px 100px;" />
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="d-grid">
+                        <div id="google_translate_element" class="dropdown"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main">
+        <nav class="navbar navbar-expand navbar-light navbar-bg bg-light d-print-none">
+            <a class="sidebar-toggle js-sidebar-toggle">
+                <i class="hamburger align-self-center"></i>
+            </a>
+
+            <div class="navbar-collapse collapse">
+                <ul class="navbar-nav navbar-align">
+                    <li class="nav-item dropdown">
+                        <a class="nav-icon dropdown-toggle d-inline-block d-sm-none" href="#" data-bs-toggle="dropdown">
+                            <i class="align-middle" data-feather="settings"></i>
+                        </a>
+
+                        <a id="dropdownMenuUser" class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                            @*<img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="Charles Hall" />*@
+                            <span class="text-dark">
+                                @UserName
+                            </span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuUser">
+                            <a class="dropdown-item" href="/account/profile">
+                                <i class="align-middle me-1" data-feather="user"></i> Mis Datos
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#cerrarSesionModal">
+                                <i class="fas fa-sign-out-alt"></i> Salir
+                            </a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="content">
+            <div class="container-fluid p-0">
+
+                @Body
+
+            </div>
+        </main>
+
+        <footer class="footer d-print-none">
+            <div class="container-fluid">
+                <div class="row text-muted">
+                    <div class="col-6 text-start">
+                        <p class="mb-0">
+                            <a class="text-muted" href="https://www.ckelar.cl/" target="_blank">
+                                <strong>
+                                    &copy; Ckelar Software SpA @AppAnio. Todos los derechos reservados.
+                                </strong>
+                            </a>
+                        </p>
+                    </div>
+                    <div class="col-6 text-end">
+                        @AppVersion
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code {
+    private string AppVersion { get; set; }
+    private string AppAnio { get; set; }
+    private string UserName { get; set; }
+    private string UserRol { get; set; }
+
+    private string Authorization { get; set; }
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        AppVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        AppAnio = "2024";
+
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Authorization = await LocalStorageComponent.Get("Authorization");
+            await Task.Delay(200);
+            if (String.IsNullOrEmpty(Authorization))
+            {
+                //NavigationManagerInstance.NavigateTo("/auth/login");
+            }
+
+            await JS.InvokeVoidAsync("googleTranslateElementInit", null);
+            await JS.InvokeVoidAsync("initializeAdminKit", null);
+
+            UserName = await LocalStorageComponent.Get("userName");
+            UserRol = await LocalStorageComponent.Get("userRol");
+
+            StateHasChanged(); // Forzar renderizado
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+}

@@ -1,0 +1,170 @@
+﻿@inject IJSRuntime JS
+@inject NavigationManager NavigationManagerInstance
+
+@using Hefesto.Response;
+@using Microsoft.JSInterop;
+@using System.Web;
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col col-sm-12 col-md-4">
+            Página @((Page <= 0) ? "1" : Page) de @TotalPage
+        </div>
+
+        @if (TotalPage > 1)
+        {
+            var queries = HttpUtility.ParseQueryString(QueryString);
+            var queriesPrev = HttpUtility.ParseQueryString(QueryString);
+            var queriesNext = HttpUtility.ParseQueryString(QueryString);
+
+            <div class="col col-sm-12 col-md-8">
+                <ul class="pagination justify-content-end flex-wrap">
+                    @if (Page > 1)
+                    {
+                        int p = (Page - 1);
+
+                        queriesPrev.Remove("page");
+                        queriesPrev.Set("page", p.ToString());
+
+                        var queriesFirst = HttpUtility.ParseQueryString(QueryString);
+                        queriesFirst.Remove("page");
+                        queriesFirst.Set("page", "1");
+
+                        <li class="page-item">
+                            <a class="page-link" href="@($"{Url}?{queriesFirst}")" aria-label="First" @onclick="@(() => PageChange(1))">
+                                Primero
+                            </a>
+                        </li>
+
+                        <li class="page-item">
+                            <a class="page-link" href="@($"{Url}?{queriesPrev}")" aria-label="Previous" @onclick="@(() => PageChange(p))">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    }
+
+                    @if (Page < TotalPage)
+                    {
+                        int pDiff = TotalPage - Page;
+                        int pCurrent = Page;
+
+                        if (pDiff <= 9)
+                        {
+                            pCurrent = TotalPage - 9;
+
+                            if (pCurrent <= 0)
+                            {
+                                pCurrent = 1;
+                            }
+                        }
+
+                        for (int p = pCurrent; p <= (Page + 9); p++)
+                        {
+                            if (p <= TotalPage)
+                            {
+                                queries.Remove("page");
+                                queries.Set("page", p.ToString());
+
+                                <li class="page-item @((p == Page) ? "active": "")">
+                                    <a class="page-link" href="@((p == Page) ? "#" : $"{Url}?{queries}")" @onclick="@(() => PageChange(p))">
+                                        @(p)
+                                    </a>
+                                </li>
+                            }
+                        }
+                    }
+                    else if (Page == TotalPage)
+                    {
+                        for (int p = (Page - 9); p <= TotalPage; p++)
+                        {
+                            if (p >= 1)
+                            {
+                                queries.Remove("page");
+                                queries.Set("page", p.ToString());
+
+                                <li class="page-item @((p == Page) ? "active": "")">
+                                    <a class="page-link" href="@((p == Page) ? "#" : $"{Url}?{queries}")" @onclick="@(() => PageChange(p))">
+                                        @(p)
+                                    </a>
+                                </li>
+                            }
+                        }
+                    }
+
+
+                    @if (Page < TotalPage)
+                    {
+                        int p = (Page + 1);
+
+                        queriesNext.Remove("page");
+                        queriesNext.Set("page", p.ToString());
+
+                        var queriesLast = HttpUtility.ParseQueryString(QueryString);
+                        queriesLast.Remove("page");
+                        queriesLast.Set("page", $"{TotalPage}");
+
+                        <li class="page-item">
+                            <a class="page-link" href="@($"{Url}?{queriesNext}")" aria-label="Next" @onclick="@(() => PageChange(p))">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+
+                        <li class="page-item">
+                            <a class="page-link" href="@($"{Url}?{queriesLast}")" aria-label="Last" @onclick="@(() => PageChange(TotalPage))">
+                                Último
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Search { get; set; }
+    [Parameter]
+    public int Page { get; set; } = 1;
+    [Parameter]
+    public int TotalPage { get; set; } = 0;
+
+    [Parameter]
+    public EventCallback<int> PageChanged { get; set; }
+
+    private string Url { get; set; }
+    private string QueryString { get; set; }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        GetUrl();
+        GetQueryString();
+
+        base.OnInitialized();
+    }
+
+    private void GetUrl()
+    {
+        var uri = new Uri(NavigationManagerInstance.Uri);
+        //Url = $"{NavigationManagerInstance.BaseUri}{uri.AbsolutePath}";
+        Url = $"{uri.AbsolutePath}";
+        Url = Url.Replace("//", "/");
+        Console.WriteLine($"URL: {Url}");
+    }
+
+    private void GetQueryString()
+    {
+        var uri = new Uri(NavigationManagerInstance.Uri);
+        QueryString = uri.Query;
+        Console.WriteLine($"QueryString: {QueryString}");
+    }
+
+    private async Task PageChange(int pageCurrent)
+    {
+        Page = pageCurrent;
+        await PageChanged.InvokeAsync(Page);
+    }
+}
