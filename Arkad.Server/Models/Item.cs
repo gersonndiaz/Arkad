@@ -36,6 +36,10 @@ namespace Arkad.Server.Models
         public bool Auto { get; set; }
 
         [Required]
+        [Column("monthly")]
+        public bool Monthly { get; set; }
+
+        [Required]
         [Column("created_date")]
         public DateTime CreatedDate { get; set; }
 

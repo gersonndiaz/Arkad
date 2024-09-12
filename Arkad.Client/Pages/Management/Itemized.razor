@@ -1,0 +1,800 @@
+﻿@layout MainLayout
+@page "/management/itemized"
+@using Arkad.Client.Shared.Components
+@using Arkad.Shared
+@using Arkad.Shared.Models
+@using Arkad.Shared.Utils.Formula
+@using Hefesto.Response
+@using Microsoft.AspNetCore.Components.Forms
+@using Newtonsoft.Json
+@using System.Diagnostics
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+@if (IsLoading)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12 text-center">
+            <h1>Cargando...</h1>
+        </div>
+    </div>
+
+    <hr />
+}
+else
+{
+    <hr />
+    <div class="row">
+        <div class="col-12">
+            <h1>Gestión Itemizado</h1>
+        </div>
+    </div>
+
+    <hr />
+
+    <div class="row">
+        <div class="co-12">
+
+            <!--#region Filtros-->
+            <div class="card">
+                <div class="card-body">
+                    <div class="col-sm-12">
+                        <div class="text-end">
+
+                            @if (!Estado)
+                            {
+                                <a @onclick="() => GetItems(true)" class="btn btn-success">
+                                    <i class="fa-solid fa-filter"></i> Activos
+                                </a>
+                            }
+                            else
+                            {
+                                <a @onclick="() => GetItems(false)" class="btn btn-secondary">
+                                    <i class="fa-solid fa-filter-circle-xmark"></i> Inactivos
+                                </a>
+                            }
+
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevoModal">
+                                <i class="fa-solid fa-square-plus"></i> Nuevo
+                            </button>
+
+                            <!--#region Modal Nuevo -->
+                            <div class="modal fade" id="nuevoModal" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="nuevoModalLabel">
+                                                Crear Item
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-black-50 text-start">
+                                            <EditForm id="formNew" Model="ItemNew" OnSubmit="@Create">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <label for="nombre" class="form-label">Nombre</label>
+                                                        <input name="nombre" type="text" class="form-control" id="nombre" required @bind-value="ItemNew.Name" />
+                                                    </div>
+                                                    <div class="col-sm-12">
+                                                        <label for="descripcion" class="form-label">Descripción</label>
+                                                        <textarea name="descripcion" class="form-control" id="descripcion">@ItemNew.Description</textarea>
+                                                    </div>
+                                                    <div class="col-sm-12">
+                                                        <label class="form-label">Tipo</label>
+                                                        <select class="form-select" required @onchange="(e) => OnSelectChange(e)">
+                                                            <option value="@(TypeEnum.VALUE)">Dato</option>
+                                                            <option value="@(TypeEnum.AVERAGE)">Promedio</option>
+                                                            <option value="@(TypeEnum.FORMULA)">Fórmula</option>
+                                                        </select>
+                                                    </div>
+                                                    @if (ItemNew.Type == "FORMULA")
+                                                    {
+                                                        <div class="col-sm-12">
+                                                            <label for="formula" class="form-label">Fórmula</label>
+                                                            <FormulaBuilderComponent @bind-FormulaString="ItemNew.Formula" 
+                                                                                     @bind-FormulaStringAux="ItemNew.FormulaAux"
+                                                                                     @bind-FormulaTest="ItemNew.FormulaTest"
+                                                                                     AvailableOperators="AvailableOperators"
+                                                                                     Items="Items" />
+                                                            @if (!String.IsNullOrEmpty(ItemNew.FormulaTest))
+                                                            {
+                                                                string cssClass = (ItemNew.FormulaTest.StartsWith("[OK]")) ? "alert-success" : "alert-danger";
+                                                                <div class="alert @cssClass" role="alert">
+                                                                    <p class="p-3">@ItemNew.FormulaTest</p>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                    else if (ItemNew.Type == "AVERAGE")
+                                                    {
+                                                        <div class="col-sm-12">
+                                                            <label for="formula" class="form-label">Fórmula</label>
+                                                            <FormulaAverageBuilderComponent @bind-FormulaString="ItemNew.Formula"
+                                                                                            @bind-FormulaStringAux="ItemNew.FormulaAux"
+                                                                                            @bind-FormulaTest="ItemNew.FormulaTest"
+                                                                                            Items="Items" />
+                                                            @if (!String.IsNullOrEmpty(ItemNew.FormulaTest))
+                                                            {
+                                                                string cssClass = (ItemNew.FormulaTest.StartsWith("[OK]")) ? "alert-success" : "alert-danger";
+                                                                <div class="alert @cssClass" role="alert">
+                                                                    <p class="p-3">@ItemNew.FormulaTest</p>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </EditForm>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-success" form="formNew" type="submit">Crear</button>
+                                            <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--#endregion Modal Nuevo -->
+
+                            <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#sortModal">
+                                <i class="fas fa-sort"></i> Ordenar
+                            </button>
+
+                            <!--#region Modal Sort -->
+                            <div class="modal fade" id="sortModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="sortModalLabel">Ordenar Items</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-black-50 text-start">
+                                            <form id="formSort" @onsubmit="() => Sort()">
+                                                <Dropzone Items="Items" TItem="Item">
+                                                    <ChildContent>
+                                                        <div class="sortable-item" style="border: 1px solid black; margin-bottom: 5px; padding: 10px;">
+                                                            @($"Posición: {context.Position} | Sección: {context.Name}")
+                                                        </div>
+                                                    </ChildContent>
+                                                </Dropzone>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-success right" type="submit" form="formSort">Guardar</button>
+                                            <button class="btn btn-secondary right" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--#endregion Modal Sort -->
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!--#endregion Filtros-->
+        </div>
+
+        <hr />
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+
+            @if (Items != null && Items.Count > 0)
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-bordered">
+                        <thead class="text-center">
+                            <tr>
+                                <th>Posición</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Tipo</th>
+                                <th>Grupo</th>
+                                <th>Mensual</th>
+                                <th>Fórmula</th>
+                                <th>F. Creado</th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Items)
+                            {
+                                string formEditId = $"editForm-{item.Id}";
+                                string formDelId = $"delForm-{item.Id}";
+
+                                string radioAsignacionId = $"radioAsignacion-{item.Id}";
+
+                                <tr>
+                                    <td>@item.Position</td>
+                                    <td>@item.Name</td>
+                                    <td>@item.Description</td>
+                                    <td>@item.Type</td>
+                                    <td></td>
+                                    <td>
+                                        @if (item.Monthly)
+                                        {
+                                            <span>Sí</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No</span>
+                                        }
+                                    </td>
+                                    <td>@item.FormulaAux</td>
+                                    <td>@item.CreatedDate.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                    <td>
+                                        <a href="/gestion/itemizado/historial?itemId=@item.Id" class="btn btn-info">
+                                            <i class="fas fa-history"></i> Historial
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editModal-@(item.Id)">
+                                            <i class="fas fa-edit"></i> Modificar
+                                        </button>
+
+                                        <!--#region Modal Modificar -->
+                                        <div class="modal fade" id="editModal-@(item.Id)" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="editModal-@(item.Id)Label">
+                                                            Modificar Ítem
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body text-black-50 text-start">
+                                                        <EditForm id="@formEditId" Model="item" OnSubmit="() => Update(item)">
+                                                            <div class="row">
+                                                                <div class="col-sm-12">
+                                                                    <label class="form-label">Nombre</label>
+                                                                    <input name="nombre" type="text" class="form-control" required @bind-value="item.Name" />
+                                                                </div>
+                                                                <div class="col-sm-12">
+                                                                    <label class="form-label">Descripción</label>
+                                                                    <input name="descripcion" type="text" class="form-control" @bind-value="item.Description" />
+                                                                </div>
+                                                                <div class="col-sm-12">
+                                                                    <label class="form-label">Tipo</label>
+                                                                    <select class="form-select" required @onchange="(e) => OnSelectChange(e, item)">
+                                                                        <option value="@(TypeEnum.VALUE)" selected="@((item.Type == "VALUE"))">Dato</option>
+                                                                        <option value="@(TypeEnum.AVERAGE)" selected="@((item.Type == "AVERAGE"))">Promedio</option>
+                                                                        <option value="@(TypeEnum.FORMULA)" selected="@((item.Type == "FORMULA"))">Fórmula</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                @if (item.Type == "FORMULA")
+                                                                {
+                                                                    <div class="col-sm-12">
+                                                                        <label for="formula" class="form-label">Fórmula</label>
+                                                                        <FormulaBuilderComponent @bind-FormulaString="item.Formula"
+                                                                                                 @bind-FormulaStringAux="item.FormulaAux"
+                                                                                                 @bind-FormulaTest="item.FormulaTest"
+                                                                                                 AvailableOperators="AvailableOperators"
+                                                                                                 Items="Items" />
+                                                                        @if (!String.IsNullOrEmpty(item.FormulaTest))
+                                                                        {
+                                                                            string cssClass = (item.FormulaTest.StartsWith("[OK]")) ? "alert-success" : "alert-danger";
+                                                                            <div class="alert @cssClass" role="alert">
+                                                                                <p class="p-3">@item.FormulaTest</p>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                }
+                                                                else if (item.Type == "AVERAGE")
+                                                                {
+                                                                    <div class="col-sm-12">
+                                                                        <label for="formula" class="form-label">Fórmula</label>
+                                                                        <FormulaAverageBuilderComponent @bind-FormulaString="item.Formula"
+                                                                                                        @bind-FormulaStringAux="item.FormulaAux"
+                                                                                                        @bind-FormulaTest="item.FormulaTest"
+                                                                                                        Items="Items" />
+                                                                        @if (!String.IsNullOrEmpty(item.FormulaTest))
+                                                                        {
+                                                                            string cssClass = (item.FormulaTest.StartsWith("[OK]")) ? "alert-success" : "alert-danger";
+                                                                            <div class="alert @cssClass" role="alert">
+                                                                                <p class="p-3">@item.FormulaTest</p>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </EditForm>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button class="btn btn-success" form="@formEditId" type="submit">Actualizar</button>
+                                                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--#endregion Modal Modificar -->
+                                    </td>
+                                    <td>
+                                        @if (item.Active)
+                                        {
+                                            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delModal-@(item.Id)">
+                                                <i class="fas fa-toggle-off"></i> Desactivar
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#delModal-@(item.Id)">
+                                                <i class="fas fa-toggle-on"></i> Activar
+                                            </button>
+                                        }
+
+                                        <!--#region Modal Activar / Desactivar -->
+                                        <div class="modal fade" id="delModal-@(item.Id)" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="delModal-@(item.Id)Label">
+                                                            @((item.Active) ? "Desactivar" : "Activar") ítem
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body text-black-50 text-start">
+                                                        <EditForm id="@formDelId" Model="item" OnSubmit="() => UpdateStatus(item)">
+                                                            <div class="row">
+                                                                <div class="col-sm-12 text-center">
+                                                                    ¿Esta seguro que desea @((item.Active) ? "desactivar" : "activar") el ítem <b>[@(item.Name)]</b>?
+                                                                </div>
+                                                            </div>
+                                                        </EditForm>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button class="btn btn-success" form="@formDelId" type="submit">@((item.Active) ? "Desactivar" : "Activar")</button>
+                                                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--#endregion Modal Activar / Desactivar -->
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p>No se encontraron items</p>
+            }
+
+        </div>
+    </div>
+}
+
+<ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code {
+    public bool Estado { get; set; } = true;
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    private FormulaBuilderComponent FormulaBuilderComponent;
+
+    public string Authorization { get; set; }
+    public bool IsLoading { get; set; } = true;
+
+    private List<FormulaItem> AvailableOperators { get; set; }
+
+    private Item ItemNew = new Item();
+    private ResponseGenericModel ResponseModel { get; set; }
+
+    public List<Item> Items { get; set; }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initializeSortable");
+
+            ItemNew.Auto = false;
+            ItemNew.Monthly = false;
+
+            await GetItems(true);
+
+            IsLoading = false;
+
+            StateHasChanged(); // Forzar renderizado
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page de forma asincrona
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        AvailableOperators = FormulaUtil.AvailableOperators();
+
+        await base.OnInitializedAsync();
+    }
+
+    string GetQueryParam(string parmName)
+    {
+        var uriBuilder = new UriBuilder(NavigationManager.Uri);
+        var q = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+        return q[parmName] ?? "";
+    }
+
+    private void OnSelectChange(ChangeEventArgs e)
+    {
+        var selectedValue = e.Value.ToString();
+        Console.WriteLine($"[OnSelectChange]: {selectedValue}");
+
+        ItemNew.Type = selectedValue;
+        ItemNew.FormulaTest = null;
+        ItemNew.Formula = null;
+        ItemNew.FormulaAux = null;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+    private void OnSelectChange(ChangeEventArgs e, Item item)
+    {
+        var selectedValue = e.Value.ToString();
+        Console.WriteLine($"[OnSelectChange]: {selectedValue}");
+
+        item.Type = selectedValue;
+        item.FormulaTest = null;
+        item.Formula = null;
+        item.FormulaAux = null;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+    private void OnDrop(Item draggedItem, Item targetItem)
+    {
+        if (draggedItem != null && targetItem != null && draggedItem != targetItem)
+        {
+            int draggedIndex = Items.IndexOf(draggedItem);
+            int targetIndex = Items.IndexOf(targetItem);
+
+            Items.RemoveAt(draggedIndex);
+            Items.Insert(targetIndex, draggedItem);
+
+            // Actualizar las posiciones
+            for (int i = 0; i < Items.Count; i++)
+            {
+                Items[i].Position = i + 1;
+            }
+        }
+    }
+
+    private void OnDragEnd(Item item)
+    {
+        // Aquí puedes manejar cualquier lógica adicional si es necesario
+    }
+
+
+
+    private async Task GetItems(bool estado)
+    {
+        try
+        {
+            Authorization = await LocalStorageComponent.Get("Authorization");
+
+            Estado = estado;
+
+            try
+            {
+                Http.DefaultRequestHeaders.Add("Authorization", Authorization);
+            }
+            catch { }
+
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/management/item/v1/get?estado={Estado}");
+
+            try
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", jsonResponse);
+
+                try
+                {
+                    ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(jsonResponse);
+
+                    if (ResponseModel.status.Equals("success", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        try
+                        {
+                            Items = JsonConvert.DeserializeObject<List<Item>>($"{ResponseModel.data}");
+                        }
+                        catch (Exception e)
+                        {
+                        //
+                        }
+                    }
+                    else
+                    {
+                        if (!String.IsNullOrEmpty(ResponseModel.urlRedirect))
+                        {
+                            await Task.Delay(2000);
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+
+                            // Redirigir a otra URL
+                            NavigationManager.NavigateTo(ResponseModel.urlRedirect);
+                        }
+                        else
+                        {
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    await JS.InvokeVoidAsync("console.log", $"Error 0: {e}");
+                }
+            }
+            catch (Exception e)
+            {
+                await JS.InvokeVoidAsync("console.log", $"Error 1: {e}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JS.InvokeVoidAsync("console.log", $"Error 2: {e}");
+        }
+
+        IsLoading = false;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+    private async Task Create()
+    {
+        TitleLoading = "Registrando ítem...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            ItemNew.Type = (String.IsNullOrEmpty(ItemNew.Type)) ? "VALUE" : ItemNew.Type;
+
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("name", ItemNew.Name),
+                                    new KeyValuePair<string, string>("description", ItemNew.Description),
+                                    new KeyValuePair<string, string>("type", ItemNew.Type),
+                                    new KeyValuePair<string, string>("formula", ItemNew.Formula),
+                                    new KeyValuePair<string, string>("formulaAux", ItemNew.FormulaAux),
+                                    new KeyValuePair<string, string>("auto", $"{ItemNew.Auto}"),
+                                    new KeyValuePair<string, string>("monthly", $"{ItemNew.Monthly}"),
+                                    new KeyValuePair<string, string>("groupId", $"{ItemNew.GroupId}")
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/management/item/v1/create");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                ItemNew = new Item();
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+        }
+
+        Estado = true;
+
+        await GetItems(Estado);
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task Update(Item item)
+    {
+        TitleLoading = "Actualizando ítem...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("id", item.Id),
+                                    new KeyValuePair<string, string>("name", item.Name),
+                                    new KeyValuePair<string, string>("description", item.Description),
+                                    new KeyValuePair<string, string>("type", item.Type),
+                                    new KeyValuePair<string, string>("formula", item.Formula),
+                                    new KeyValuePair<string, string>("formulaAux", item.FormulaAux),
+                                    new KeyValuePair<string, string>("auto", $"{item.Auto}"),
+                                    new KeyValuePair<string, string>("monthly", $"{item.Monthly}"),
+                                    new KeyValuePair<string, string>("groupId", $"{item.GroupId}")
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/management/item/v1/update");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+            await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+        }
+
+        await GetItems(Estado);
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task UpdateStatus(Item item)
+    {
+        TitleLoading = "Actualizando ítem...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("id", item.Id)
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/management/item/v1/update/status");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+            await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+        }
+
+        await GetItems(Estado);
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task Sort()
+    {
+        TitleLoading = "Ordenando ítems...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("items", JsonConvert.SerializeObject(Items))
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/management/item/v1/update/sort");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+            await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+        }
+
+        await GetItems(Estado);
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+}
