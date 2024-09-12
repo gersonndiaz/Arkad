@@ -3,7 +3,7 @@
 
 @inject HttpClient Http
 @inject IConfiguration configuration
-@inject IJSRuntime jsRuntime
+@inject IJSRuntime JS
 @inject NavigationManager NavigationManagerInstance
 
 @using Arkad.Client.Shared.Components
@@ -35,7 +35,7 @@
                                 <img class="w-75 p-2" src="/img/ckelar-logo.png" />
 
                                 <div>
-                                    <img src="/img/logo_enami_blanco.png" class="w-75 p-2" />
+                                    <img src="/img/logo.png" class="w-75 p-2" />
                                 </div>
                             </div>
                         </div>
@@ -91,7 +91,7 @@
                                 <img class="img-fluid p-2" src="/img/ckelar-logo.png" />
 
                                 <div>
-                                    <img src="/img/logo_enami_blanco.png" class="img-fluid p-2" />
+                                    <img src="/img/logo.png" class="img-fluid p-2" />
                                 </div>
                             </div>
                         </div>
@@ -122,7 +122,6 @@
     public string UserName { get; set; }
     public string Password { get; set; }
     public string ClientIP { get; set; }
-    public string clientId { get; set; }
 
     // Objeto que obtiene la respuesta de Autenticar()
     private ResponseGenericModel ResponseGenericModel { get; set; }
@@ -217,7 +216,7 @@
 
             #if (DEBUG)
     Debug.WriteLine($"Username: {userNameValue}");
-    jsRuntime.InvokeVoidAsync("console.log", $"Username: {userNameValue}");
+    JS.InvokeVoidAsync("console.log", $"Username: {userNameValue}");
             #endif
 
             if (!String.IsNullOrEmpty(userNameValue))
@@ -241,7 +240,7 @@
                 else
                 {
                     usernameIsValid = false;
-                    usernameErrMessage = "El nombre de usuario no es un RUN ni Correo electrónico válido.";
+                    usernameErrMessage = "El nombre de usuario no es un correo electrónico válido.";
                 }
             }
         }
@@ -249,7 +248,7 @@
         {
             #if (DEBUG)
     Debug.WriteLine($"Error Username: {ex}");
-    jsRuntime.InvokeVoidAsync("console.log", $"Error Username: {ex}");
+    JS.InvokeVoidAsync("console.log", $"Error Username: {ex}");
             #endif
         }
     }
@@ -266,7 +265,7 @@
 
             #if (DEBUG)
     Debug.WriteLine($"Contraseña: {passwordValue}");
-    jsRuntime.InvokeVoidAsync("console.log", $"Contraseña: {passwordValue}");
+    JS.InvokeVoidAsync("console.log", $"Contraseña: {passwordValue}");
             #endif
 
             if (!String.IsNullOrEmpty(passwordValue)
@@ -285,7 +284,7 @@
         {
             #if (DEBUG)
     Debug.WriteLine($"Error Contraseña: {ex}");
-    jsRuntime.InvokeVoidAsync("console.log", $"Error Contraseña: {ex}");
+    JS.InvokeVoidAsync("console.log", $"Error Contraseña: {ex}");
             #endif
         }
     }
@@ -344,17 +343,15 @@
                 var content = new FormUrlEncodedContent(formData);
 
                 #if (DEBUG)
-        Debug.WriteLine($"ClientId: {clientId}");
         Debug.WriteLine($"UserName: {UserName}");
         Debug.WriteLine($"Password: {Password}");
 
-        await jsRuntime.InvokeVoidAsync("console.log", $"ClientId: {clientId}");
-        await jsRuntime.InvokeVoidAsync("console.log", $"UserName: {UserName}");
-        await jsRuntime.InvokeVoidAsync("console.log", $"Password: {Password}");
+        await JS.InvokeVoidAsync("console.log", $"ClientId: {clientId}");
+        await JS.InvokeVoidAsync("console.log", $"UserName: {UserName}");
+        await JS.InvokeVoidAsync("console.log", $"Password: {Password}");
                 #endif
 
                 var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManagerInstance.BaseUri}api/auth/Authorization/v1/login");
-                request.Headers.Add("clientId", clientId);
                 request.Headers.Add("client-ip", ClientIP);
                 request.Content = content;
 
@@ -363,14 +360,14 @@
                 ResponseGenericModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
 
                 Debug.WriteLine($"Response: {responseString}");
-                await jsRuntime.InvokeVoidAsync("console.log", $"Response: {responseString}");
+                await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
 
                 if (ResponseGenericModel.status != StatusResponseCodes.StatusResponseSuccess)
                 {
                     Title = ResponseGenericModel.subject;
                     Message = ResponseGenericModel.message;
 
-                    await jsRuntime.InvokeVoidAsync("alert", $"Error: {Message}");
+                    await JS.InvokeVoidAsync("alert", $"Error: {Message}");
                 }
                 else
                 {
@@ -379,9 +376,9 @@
                     LoginRespData loginData = JsonConvert.DeserializeObject<LoginRespData>(ResponseGenericModel.data.ToString());
 
                     await LocalStorageComponent.Save(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, loginData.Authorization);
-                    await LocalStorageComponent.Save("userName", loginData.usuario.Nombre);
-                    await LocalStorageComponent.Save("userEmail", loginData.usuario.Correo);
-                    await LocalStorageComponent.Save("userRol", loginData.usuario.Rol);
+                    await LocalStorageComponent.Save("userName", loginData.user.Name);
+                    await LocalStorageComponent.Save("userEmail", loginData.user.Email);
+                    await LocalStorageComponent.Save("userRol", loginData.user.Role);
 
                     await LoginSuccessRedirect(ResponseGenericModel.urlRedirect);
                 }
@@ -392,7 +389,7 @@
                 Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
 
                 Debug.WriteLine($"Error: {e}");
-                await jsRuntime.InvokeVoidAsync("console.log", $"Error: {e}");
+                await JS.InvokeVoidAsync("console.log", $"Error: {e}");
             }
 
             await Task.Delay(1000);
@@ -405,23 +402,23 @@
     /// </summary>
     public class LoginRespData
     {
-        public Usuario usuario { get; set; }
+        public User user { get; set; }
         public string Authorization { get; set; }
     }
 
-    public class Usuario
+    public class User
     {
-        [JsonProperty("Nombre")]
-        public string Nombre;
+        [JsonProperty("Name")]
+        public string Name;
 
-        [JsonProperty("Correo")]
-        public string Correo;
+        [JsonProperty("Email")]
+        public string Email;
 
-        [JsonProperty("FUltimaConexion")]
-        public DateTime FUltimaConexion;
+        [JsonProperty("LastLogin")]
+        public DateTime LastLogin;
 
-        [JsonProperty("Rol")]
-        public string Rol;
+        [JsonProperty("Role")]
+        public string Role;
     }
 
     /// <summary>
@@ -431,7 +428,7 @@
     /// <returns></returns>
     public async Task LoginSuccessRedirect(string redirectUrl)
     {
-        await jsRuntime.InvokeVoidAsync("closeAllModal", null);
+        await JS.InvokeVoidAsync("closeAllModal", null);
         NavigationManagerInstance.NavigateTo(redirectUrl);
     }
     #endregion Autenticar

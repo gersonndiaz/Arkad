@@ -27,14 +27,12 @@ namespace Arkad.Server.Areas.Auth.Controllers
         private readonly IConfiguration configuration;
 
         private string Authorization = "";
-        private string clientId;
         private string clientSecret;
 
         public AuthorizationController(IConfiguration configuration)
         {
             this.configuration = configuration;
-            clientId = configuration.GetSection("AppSettings").GetSection("ClientAuth").GetSection("clientId").Value;
-            clientSecret = configuration.GetSection("AppSettings").GetSection("ClientAuth").GetSection("clientSecret").Value;
+            clientSecret = configuration.GetSection("AppSettings").GetSection("ClientAuth").GetSection("Secret").Value;
         }
 
         [HttpPost("v1/login")]
@@ -52,8 +50,8 @@ namespace Arkad.Server.Areas.Auth.Controllers
 
                 string clientIp = Request.Headers[TagUtil.TAG_REQUEST_HEADER_CLIENTIP].ToString();
 
-                string nombreUsuario = HttpContext.Request.Form["nombreUsuario"];
-                string clave = Request.Form["clave"];
+                string userName = HttpContext.Request.Form["userName"];
+                string password = Request.Form["password"];
 
 
                 if (!String.IsNullOrEmpty(Authorization))
@@ -68,7 +66,7 @@ namespace Arkad.Server.Areas.Auth.Controllers
                 else
                 {
                     #region VALIDACION
-                    if (String.IsNullOrEmpty(nombreUsuario))
+                    if (String.IsNullOrEmpty(userName))
                     {
                         httpStatusCode = HttpStatusCode.BadRequest;
                         response.status = StatusResponseCodes.StatusResponseError;
@@ -76,8 +74,8 @@ namespace Arkad.Server.Areas.Auth.Controllers
                         response.message = "El nombre de usuario es obligatorio";
                         response.httpCode = (int)httpStatusCode;
                     }
-                    else if (!DataTypeValidation.checkEmailAddress(nombreUsuario)
-                            && !Rut.validar(nombreUsuario))
+                    else if (!DataTypeValidation.checkEmailAddress(userName)
+                            && !Rut.validar(userName))
                     {
                         httpStatusCode = HttpStatusCode.BadRequest;
                         response.status = StatusResponseCodes.StatusResponseError;
@@ -85,7 +83,7 @@ namespace Arkad.Server.Areas.Auth.Controllers
                         response.message = "El nombre de usuario ingresado no tiene un formato valido";
                         response.httpCode = (int)httpStatusCode;
                     }
-                    else if (String.IsNullOrEmpty(clave))
+                    else if (String.IsNullOrEmpty(password))
                     {
                         httpStatusCode = HttpStatusCode.BadRequest;
                         response.status = StatusResponseCodes.StatusResponseError;
@@ -97,28 +95,27 @@ namespace Arkad.Server.Areas.Auth.Controllers
                     else
                     {
                         #region Formateo Datos
-                        nombreUsuario = nombreUsuario.Trim().ToUpper();
+                        userName = userName.Trim().ToUpper();
 
-                        if (Rut.validar(nombreUsuario))
+                        if (Rut.validar(userName))
                         {
-                            nombreUsuario = Rut.removeFormatRutChile(nombreUsuario);
-                            nombreUsuario.Trim().ToUpper();
+                            userName = Rut.removeFormatRutChile(userName);
+                            userName.Trim().ToUpper();
                         }
 
                         #endregion Formateo Datos
 
                         #region DAO
-                        UsuarioDao usuarioDao = new UsuarioDao();
+                        UserDao userDao = new UserDao();
                         #endregion DAO
 
                         #region DTO
-                        Usuario usuario = (Rut.validar(nombreUsuario)) ? usuarioDao.GetByRun(nombreUsuario) : usuarioDao.GetByCorreo(nombreUsuario);
-                        Rol rol = (usuario is not null) ? usuarioDao.GetRolById(usuario.RolId) : null;
+                        User user = userDao.GetByEmail(userName);
                         #endregion DTO
 
-                        clave = EncryptUtil.SHA512(clave);
+                        password = EncryptUtil.SHA512(password);
 
-                        if (usuario == null || !usuario.BActivo)
+                        if (user == null || !user.Active)
                         {
                             httpStatusCode = HttpStatusCode.OK;
                             response.status = StatusResponseCodes.StatusResponseError;
@@ -126,7 +123,7 @@ namespace Arkad.Server.Areas.Auth.Controllers
                             response.message = "Usuario no encontrado!";
                             response.httpCode = (int)httpStatusCode;
                         }
-                        else if (usuario.Clave != clave)
+                        else if (user.Password != password)
                         {
                             httpStatusCode = HttpStatusCode.OK;
                             response.status = StatusResponseCodes.StatusResponseError;
@@ -134,17 +131,10 @@ namespace Arkad.Server.Areas.Auth.Controllers
                             response.message = "Usuario y/o contraseña incorrecta!";
                             response.httpCode = (int)httpStatusCode;
                         }
-                        else if (rol is null)
-                        {
-                            httpStatusCode = HttpStatusCode.OK;
-                            response.status = StatusResponseCodes.StatusResponseError;
-                            response.subject = "Acceso no autorizado!";
-                            response.message = "El usuario no tiene un rol asignado!";
-                            response.httpCode = (int)httpStatusCode;
-                        }
                         else
                         {
-                            usuario.FUltimaConexion = DateTime.Now;
+                            user.LastLogin = DateTime.Now;
+                            user.LastLoginIP = clientIp;
 
                             Dictionary<string, object> objectData = new Dictionary<string, object>();
 
@@ -168,7 +158,7 @@ namespace Arkad.Server.Areas.Auth.Controllers
                             Claim[] claims = new[]
                                 {
                                     new Claim(TagUtil.TAG_JWT_CLAIM_JWT_ID, Guid.NewGuid().ToString()),
-                                    new Claim(TagUtil.TAG_JWT_CLAIM_USUARIO_ID, usuario.Id)
+                                    new Claim(TagUtil.TAG_JWT_CLAIM_USUARIO_ID, user.Id)
                                 };
 
                             ClaimsIdentity ci = new ClaimsIdentity();
@@ -177,17 +167,17 @@ namespace Arkad.Server.Areas.Auth.Controllers
 
                             Dictionary<string, object> dataUsuario = new Dictionary<string, object>();
 
-                            dynamic mUsuario = new ExpandoObject();
-                            mUsuario.Nombre = usuario.Nombre;
-                            mUsuario.Correo = usuario.Correo;
-                            mUsuario.FUltimaConexion = usuario.FUltimaConexion;
-                            mUsuario.Rol = rol.Codigo;
+                            dynamic mUser = new ExpandoObject();
+                            mUser.Name = user.Name;
+                            mUser.Email = user.Email;
+                            mUser.LastLogin = user.LastLogin;
+                            mUser.Role = user.Role.Code;
 
-                            objectData.Add("usuario", mUsuario);
+                            objectData.Add("user", mUser);
 
                             objectData.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
 
-                            bool success = usuarioDao.Update(usuario);
+                            bool success = userDao.Update(user);
 
                             if (!success)
                             {
@@ -219,7 +209,7 @@ namespace Arkad.Server.Areas.Auth.Controllers
                 response.message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
                 response.httpCode = (int)httpStatusCode;
 
-                logger.Error(TAG + " -- " + e);
+                logger.Error($"{TAG}  -- {e}");
             }
 
             this.HttpContext.Response.StatusCode = httpStatusCode.GetHashCode();
