@@ -1,0 +1,667 @@
+﻿@layout MainLayout
+@page "/management/period"
+@using Arkad.Client.Shared.Components
+@using Arkad.Shared
+@using Arkad.Shared.Models
+@using Hefesto.Response
+@using Microsoft.AspNetCore.Components.Forms
+@using Newtonsoft.Json
+@using System.Diagnostics
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+@if (IsLoading)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12 text-center">
+            <h1>Cargando...</h1>
+        </div>
+    </div>
+
+    <hr />
+}
+else
+{
+    <hr />
+    <div class="row">
+        <div class="col-12">
+            <h1>Gestión Periodos</h1>
+        </div>
+    </div>
+
+    <hr />
+
+    <div class="row">
+        <div class="co-12">
+
+            <!--#region Filtros-->
+            <div class="card">
+                <div class="card-body">
+                    <div class="col-sm-12">
+                        <div class="text-end">
+
+                            @if (!Status)
+                            {
+                                <a @onclick="() => GetPeriods(true)" class="btn btn-success">
+                                    <i class="fa-solid fa-filter"></i> Activos
+                                </a>
+                            }
+                            else
+                            {
+                                <a @onclick="() => GetPeriods(false)" class="btn btn-secondary">
+                                    <i class="fa-solid fa-filter-circle-xmark"></i> Inactivos
+                                </a>
+                            }
+
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevoModal">
+                                <i class="fa-solid fa-square-plus"></i> Nuevo
+                            </button>
+
+                            <!--#region Modal Nuevo -->
+                            <div class="modal fade" id="nuevoModal" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="nuevoModalLabel">
+                                                Crear Periodo
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-black-50 text-start">
+                                            <EditForm id="formNew" Model="PeriodNew" OnSubmit="@Create">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <label class="form-label">Año</label>
+                                                        <input name="anio" type="number" class="form-control" required @bind-value="PeriodNew.Year" min="2000" max="@MaxYear" />
+                                                    </div>
+                                                    <div class="col-sm-12">
+                                                        <label class="form-label">Mes</label>
+                                                        <input name="mes" type="number" class="form-control" required @bind-value="PeriodNew.Month" min="1" max="12" />
+                                                    </div>
+                                                </div>
+                                            </EditForm>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-success" form="formNew" type="submit">Crear</button>
+                                            <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--#endregion Modal Nuevo -->
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <hr />
+        <!--#endregion Filtros-->
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+
+            @if (Periods != null && Periods.Count > 0)
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-bordered">
+                        <thead class="text-center">
+                            <tr>
+                                <th>Año</th>
+                                <th>Mes</th>
+                                <th>Estado</th>
+                                <th>F. Creado</th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var period in Periods)
+                            {
+                                string formOpenCloseId = $"openCloseForm-{Guid.NewGuid().ToString()}";
+                                string formEditId = $"editForm-{period.Id}";
+                                string formDelId = $"delForm-{period.Id}";
+
+                                string msgOpenClose = (period.Current) ? "Cerrando periodo" : "Abriendo periodo";
+
+                                <tr>
+                                    <td class="text-center">@period.Year</td>
+                                    <td class="text-center">@(period.Month.ToString("D2"))</td>
+                                    <td class="text-center">
+                                        @if (period.Current)
+                                        {
+                                            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#openCloseForm-@(period.Id)">
+                                                <i class="fas fa-toggle-off"></i> Cerrar
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#openCloseForm-@(period.Id)">
+                                                <i class="fas fa-toggle-on"></i> Abrir
+                                            </button>
+                                        }
+
+                                        <!--#region Modal Abrir / Cerrar -->
+                                        <div class="modal fade" id="openCloseForm-@(period.Id)" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="openCloseForm-@(period.Id)Label">
+                                                            @((period.Current) ? "Cerrar" : "Abrir") periodo
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body text-black-50 text-start">
+                                                        <EditForm id="@formOpenCloseId" Model="period" OnSubmit="() => UpdateCurrent(period, msgOpenClose)">
+                                                            <div class="row">
+                                                                <div class="col-sm-12 text-center">
+                                                                    ¿Esta seguro que desea @((period.Current) ? "cerrar" : "abrir") el periodo <b>[@(period.Year)/@period.Month.ToString("D2")]</b>?
+                                                                </div>
+                                                            </div>
+                                                        </EditForm>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button class="btn btn-success" form="@formOpenCloseId" type="submit">@((period.Current) ? "Cerrar" : "Abrir")</button>
+                                                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--#endregion Modal Abrir / Cerrar -->
+                                    </td>
+                                    <td class="text-center">@period.CreatedDate.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                    <td class="text-center">
+                                        <a href="/management/period/history?periodId=@period.Id" class="btn btn-info">
+                                            <i class="fas fa-history"></i> Historial
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editModal-@(period.Id)">
+                                            <i class="fas fa-edit"></i> Modificar
+                                        </button>
+
+                                        <!--#region Modal Modificar -->
+                                        <div class="modal fade" id="editModal-@(period.Id)" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="editModal-@(period.Id)Label">
+                                                            Modificar Periodo
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body text-black-50 text-start">
+                                                        <EditForm id="@formEditId" Model="period" OnSubmit="() => Update(period)">
+                                                            <div class="row">
+                                                                <div class="col-sm-12">
+                                                                    <label class="form-label">Año</label>
+                                                                    <input name="anio" type="number" class="form-control" required @bind-value="period.Year" min="2000" max="@MaxYear" />
+                                                                </div>
+                                                                <div class="col-sm-12">
+                                                                    <label class="form-label">Mes</label>
+                                                                    <input name="mes" type="number" class="form-control" required @bind-value="period.Month" min="1" max="12" />
+                                                                </div>
+                                                            </div>
+                                                        </EditForm>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button class="btn btn-success" form="@formEditId" type="submit">Actualizar</button>
+                                                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--#endregion Modal Modificar -->
+                                    </td>
+                                    <td class="text-center">
+                                        @if (period.Active)
+                                        {
+                                            <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delModal-@(period.Id)">
+                                                <i class="fas fa-toggle-off"></i> Desactivar
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#delModal-@(period.Id)">
+                                                <i class="fas fa-toggle-on"></i> Activar
+                                            </button>
+                                        }
+
+                                        <!--#region Modal Activar / Desactivar -->
+                                        <div class="modal fade" id="delModal-@(period.Id)" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="delModal-@(period.Id)Label">
+                                                            @((period.Active) ? "Desactivar" : "Activar") periodo
+                                                        </h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body text-black-50 text-start">
+                                                        <EditForm id="@formDelId" Model="period" OnSubmit="() => UpdateStatus(period)">
+                                                            <div class="row">
+                                                                <div class="col-sm-12 text-center">
+                                                                    ¿Esta seguro que desea @((period.Active) ? "desactivar" : "activar") el periodo <b>[@(period.Year)/@period.Month.ToString("D2")]</b>?
+                                                                </div>
+                                                            </div>
+                                                        </EditForm>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button class="btn btn-success" form="@formDelId" type="submit">@((period.Active) ? "Desactivar" : "Activar")</button>
+                                                        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!--#endregion Modal Activar / Desactivar -->
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p>No se encontraron periodos disponibles</p>
+            }
+
+        </div>
+    </div>
+}
+
+<ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code {
+    [SupplyParameterFromQuery(Name = "page")]
+    public int Page { get; set; } = 1;
+
+    [SupplyParameterFromQuery(Name = "seach")]
+    private string Search { get; set; }
+
+    private int TotalPage { get; set; } = 0;
+
+    public int MaxYear { get; set; }
+    public bool Status { get; set; } = true;
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    public string Authorization { get; set; }
+    public bool IsLoading { get; set; } = true;
+
+    private Arkad.Shared.Models.Period PeriodNew = new Arkad.Shared.Models.Period()
+    {
+        Year = DateTime.Now.Year,
+        Month = DateTime.Now.Month
+    };
+    private ResponseGenericModel ResponseModel { get; set; }
+    private Data ResponseData { get; set; }
+
+    public List<Arkad.Shared.Models.Period> Periods { get; set; }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            MaxYear = DateTime.Now.Year;
+
+            await GetPeriods(true);
+
+            IsLoading = false;
+
+            StateHasChanged(); // Forzar renderizado
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page de forma asincrona
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    string GetQueryParam(string parmName)
+    {
+        var uriBuilder = new UriBuilder(NavigationManager.Uri);
+        var q = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+        return q[parmName] ?? "";
+    }
+
+    private async Task GetPeriods(bool status)
+    {
+        try
+        {
+            Authorization = await LocalStorageComponent.Get("Authorization");
+
+            Status = status;
+
+            try
+            {
+                Http.DefaultRequestHeaders.Add("Authorization", Authorization);
+            }
+            catch { }
+
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/management/period/v1/get?status={Status}&page={Page}");
+
+            try
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", jsonResponse);
+
+                try
+                {
+                    ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(jsonResponse);
+
+                    if (ResponseModel.status.Equals("success", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        try
+                        {
+                            //Periodos = JsonConvert.DeserializeObject<List<Argos.Shared.Models.Periodo>>($"{ResponseModel.data}");
+                            ResponseData = JsonConvert.DeserializeObject<Data>($"{ResponseModel.data}");
+
+                            Periods = ResponseData.Periods;
+                            TotalPage = ResponseData.TotalPages;
+                        }
+                        catch (Exception e)
+                        {
+                            //
+                        }
+                    }
+                    else
+                    {
+                        if (!String.IsNullOrEmpty(ResponseModel.urlRedirect))
+                        {
+                            await Task.Delay(2000);
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+
+                            // Redirigir a otra URL
+                            NavigationManager.NavigateTo(ResponseModel.urlRedirect);
+                        }
+                        else
+                        {
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    await JS.InvokeVoidAsync("console.log", $"Error 0: {e}");
+                }
+            }
+            catch (Exception e)
+            {
+                await JS.InvokeVoidAsync("console.log", $"Error 1: {e}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JS.InvokeVoidAsync("console.log", $"Error 2: {e}");
+        }
+
+        IsLoading = false;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+    private async Task Create()
+    {
+        TitleLoading = "Registrando periodo...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                            {
+                                new KeyValuePair<string, string>("year", $"{PeriodNew.Year}"),
+                                new KeyValuePair<string, string>("month", $"{PeriodNew.Month}")
+                            };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/management/period/v1/create");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                PeriodNew = new Arkad.Shared.Models.Period()
+                    {
+                        Year = DateTime.Now.Year,
+                        Month = DateTime.Now.Month
+                    };
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+        }
+
+        Status = true;
+
+        await GetPeriods(Status);
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task Update(Arkad.Shared.Models.Period period)
+    {
+        TitleLoading = "Actualizando periodo...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                            {
+                                new KeyValuePair<string, string>("id", period.Id),
+                                new KeyValuePair<string, string>("year", $"{period.Year}"),
+                                new KeyValuePair<string, string>("month", $"{period.Month}")
+                            };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/management/period/v1/update");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+            await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+        }
+
+        await GetPeriods(Status);
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task UpdateStatus(Arkad.Shared.Models.Period period)
+    {
+        TitleLoading = "Actualizando periodo...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                            {
+                                new KeyValuePair<string, string>("id", period.Id)
+                            };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/management/period/v1/update/status");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+            await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+        }
+
+        await GetPeriods(Status);
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task UpdateCurrent(Arkad.Shared.Models.Period period, string message)
+    {
+        //TitleLoading = "Actualizando periodo...";
+        TitleLoading = $"";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                            {
+                                new KeyValuePair<string, string>("id", period.Id)
+                            };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/management/period/v1/update/current");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+            await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+        }
+
+        await GetPeriods(Status);
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+
+    public class Data
+    {
+        [JsonProperty("periods")]
+        public List<Arkad.Shared.Models.Period> Periods;
+
+        [JsonProperty("totalData")]
+        public int TotalData;
+
+        [JsonProperty("totalPages")]
+        public int TotalPages;
+    }
+}

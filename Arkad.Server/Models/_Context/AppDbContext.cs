@@ -15,7 +15,9 @@ namespace Arkad.Server.Models._Context
                                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
             var configuration = builder.Build();
 
-            optionsBuilder.UseSqlite(configuration.GetConnectionString("ArkadConnection"));
+            optionsBuilder
+                .UseSqlite(configuration.GetConnectionString("ArkadConnection"))
+                .UseLazyLoadingProxies();
         }
     }
 }
