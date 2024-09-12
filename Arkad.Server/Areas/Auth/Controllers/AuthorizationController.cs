@@ -111,6 +111,7 @@ namespace Arkad.Server.Areas.Auth.Controllers
 
                         #region DTO
                         User user = userDao.GetByEmail(userName);
+                        Role role = (user is not null) ? userDao.GetRoleById(user.RoleId) : null;
                         #endregion DTO
 
                         password = EncryptUtil.SHA512(password);
@@ -129,6 +130,14 @@ namespace Arkad.Server.Areas.Auth.Controllers
                             response.status = StatusResponseCodes.StatusResponseError;
                             response.subject = "Acceso no autorizado!";
                             response.message = "Usuario y/o contraseña incorrecta!";
+                            response.httpCode = (int)httpStatusCode;
+                        }
+                        else if (role is null)
+                        {
+                            httpStatusCode = HttpStatusCode.OK;
+                            response.status = StatusResponseCodes.StatusResponseError;
+                            response.subject = "Acceso no autorizado!";
+                            response.message = "El usuario no tiene un rol asignado!";
                             response.httpCode = (int)httpStatusCode;
                         }
                         else
@@ -171,7 +180,7 @@ namespace Arkad.Server.Areas.Auth.Controllers
                             mUser.Name = user.Name;
                             mUser.Email = user.Email;
                             mUser.LastLogin = user.LastLogin;
-                            mUser.Role = user.Role.Code;
+                            mUser.Role = role.Code;
 
                             objectData.Add("user", mUser);
 

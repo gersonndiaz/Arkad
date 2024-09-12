@@ -12,7 +12,7 @@
         @foreach (var item in Items)
         {
             <div class="clickable-item" @onclick="@(() => AddToFormula(item, true))">
-                @item.Nombre
+                @item.Name
             </div>
         }
     </div>
@@ -92,7 +92,7 @@
 
     private async Task AddToFormula(Item item, bool isItem)
     {
-        Formula.Add(($"[{item.Id}]", $"[{item.Nombre}]"));
+        Formula.Add(($"[{item.Id}]", $"[{item.Name}]"));
         await UpdateFormulaString();
     }
 

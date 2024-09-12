@@ -41,7 +41,7 @@
                         </div>
                         <div class="col-md-7 pe-0">
                             <div class="form-left h-100 py-5 px-5">
-                                <EditForm Model="@usuario" OnValidSubmit="@Autenticar">
+                                <EditForm Model="@User" OnValidSubmit="@Autenticar">
 
                                     <input id="clientIp" name="client-ip" type="hidden" @bind-value="@ClientIP" />
 
@@ -49,7 +49,7 @@
                                         <label>Nombre de Usuario<span class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <div class="input-group-text"><i class="fa fa-user"></i></div>
-                                            <input name="nombreUsuario" type="text" class="form-control @usernameInputIsValidClasses" placeholder="Nombre de Usuario" autocomplete="off" autofocus required @bind-value="@UserName" @oninput="UsernameKeyUp">
+                                            <input name="nombreUsuario" type="text" class="form-control @usernameInputIsValidClasses" placeholder="Nombre de Usuario" autocomplete="off" autofocus required @bind-value="@User.Email" @oninput="UsernameKeyUp">
                                             @if (usernameIsValid.HasValue && !usernameIsValid.Value)
                                             {
                                                 <div class="invalid-feedback">
@@ -63,7 +63,7 @@
                                         <label>Contraseña<span class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <div class="input-group-text"><i class="fa fa-key"></i></div>
-                                            <input name="clave" type="password" class="form-control @passwordInputIsValidClasses" placeholder="Contraseña" required @bind-value="@Password" @oninput="PasswordKeyUp">
+                                            <input name="clave" type="password" class="form-control @passwordInputIsValidClasses" placeholder="Contraseña" required @bind-value="@User.Password" @oninput="PasswordKeyUp">
                                             @if (passwordIsValid.HasValue && !passwordIsValid.Value)
                                             {
                                                 <div class="invalid-feedback">
@@ -83,6 +83,8 @@
                                         </button>
                                     </div>
                                 </EditForm>
+
+                                <p class="text-center mt-3">Su IP actual es: @ClientIP</p>
                             </div>
                         </div>
                         <div class="col-md-5 d-none d-md-inline-flex justify-content-center align-items-center bg-secondary bg-opacity-50 text-center">
@@ -119,8 +121,6 @@
 {
 
     // Atributos que son utilizados en el formulario
-    public string UserName { get; set; }
-    public string Password { get; set; }
     public string ClientIP { get; set; }
 
     // Objeto que obtiene la respuesta de Autenticar()
@@ -139,8 +139,8 @@
     // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
     private LocalStorageComponent LocalStorageComponent;
 
-    // Objeto para validar el formulario por sus Etieutas de anotación (Si tiene)
-    public Usuario usuario = new Usuario();
+    // Objeto para validar el formulario por sus Etiquetas de anotación (Si tiene)
+    public Arkad.Shared.Models.User User = new Arkad.Shared.Models.User();
 
     // Atributos para obtener el valor del nombre de usuario y contraseña mientras se escribe
     private string userNameValue = string.Empty;
@@ -296,14 +296,14 @@
     /// <returns></returns>
     public async Task Autenticar()
     {
-        if (String.IsNullOrEmpty(UserName))
+        if (String.IsNullOrEmpty(User.Email))
         {
             usernameIsValid = false;
             Title = "Error Usuario";
             Message = "El nombre de usuario es obligatorio!";
             await ModalsComponent.ShowAlertModal();
         }
-        else if (!DataTypeValidation.checkEmailAddress(UserName)
+        else if (!DataTypeValidation.checkEmailAddress(User.Email)
                 /* && !Rut.validar(UserName) */)
         {
             usernameIsValid = false;
@@ -311,14 +311,14 @@
             Message = "El nombre de usuario no es válido!";
             await ModalsComponent.ShowAlertModal();
         }
-        else if (String.IsNullOrEmpty(Password))
+        else if (String.IsNullOrEmpty(User.Password))
         {
             passwordIsValid = false;
             Title = "Error Contraseña";
             Message = "La contraseña es obligatoria!";
             await ModalsComponent.ShowAlertModal();
         }
-        else if (Password.Length < 4)
+        else if (User.Password.Length < 4)
         {
             passwordIsValid = false;
             Title = "Error Usuario";
@@ -337,18 +337,17 @@
             {
                 var formData = new List<KeyValuePair<string, string>>
                                 {
-                                    new KeyValuePair<string, string>("nombreUsuario", UserName),
-                                    new KeyValuePair<string, string>("clave", Password)
+                                    new KeyValuePair<string, string>("userName", User.Email),
+                                    new KeyValuePair<string, string>("password", User.Password)
                                 };
                 var content = new FormUrlEncodedContent(formData);
 
                 #if (DEBUG)
-        Debug.WriteLine($"UserName: {UserName}");
-        Debug.WriteLine($"Password: {Password}");
+    Debug.WriteLine($"UserName: {User.Email}");
+    Debug.WriteLine($"Password: {User.Password}");
 
-        await JS.InvokeVoidAsync("console.log", $"ClientId: {clientId}");
-        await JS.InvokeVoidAsync("console.log", $"UserName: {UserName}");
-        await JS.InvokeVoidAsync("console.log", $"Password: {Password}");
+    await JS.InvokeVoidAsync("console.log", $"UserName: {User.Email}");
+    await JS.InvokeVoidAsync("console.log", $"Password: {User.Password}");
                 #endif
 
                 var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManagerInstance.BaseUri}api/auth/Authorization/v1/login");
@@ -402,11 +401,11 @@
     /// </summary>
     public class LoginRespData
     {
-        public User user { get; set; }
+        public UserData user { get; set; }
         public string Authorization { get; set; }
     }
 
-    public class User
+    public class UserData
     {
         [JsonProperty("Name")]
         public string Name;

@@ -7,7 +7,7 @@
         @foreach (var item in Items)
         {
             <div class="clickable-item" @onclick="@(() => AddToAverage(item))">
-                @item.Nombre
+                @item.Name
             </div>
         }
     </div>
@@ -69,7 +69,7 @@
 
     private async Task AddToAverage(Item item)
     {
-        SelectedItems.Add(($"[{item.Id}]", $"[{item.Nombre}]"));
+        SelectedItems.Add(($"[{item.Id}]", $"[{item.Name}]"));
         await UpdateAverageStrings();
     }
 
