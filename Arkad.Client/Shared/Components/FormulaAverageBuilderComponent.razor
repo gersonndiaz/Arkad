@@ -60,10 +60,13 @@
     {
         if (!string.IsNullOrEmpty(FormulaString))
         {
-            SelectedItems = FormulaString.Split(' ')
-                                         .Select(x => (x, x))
-                                         .ToList();
-            UpdateAverageStrings();
+            // SelectedItems = FormulaString.Split(' ')
+            //                              .Select(x => (x, x))
+            //                              .ToList();
+            // UpdateAverageStrings();
+
+            SelectedItems = FormulaString.Split(' ').Select(x => (x, x)).ToList();
+            FormulaStringAux = string.Join(" ", SelectedItems.Select(f => f.DisplayName));
         }
     }
 
