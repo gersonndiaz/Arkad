@@ -13,9 +13,14 @@ namespace Arkad.Server.DAO
         bool Update(List<Item> items, List<History> histories, List<HistoryItem> historiesItem);
         #endregion Item
 
-        #region Historial
+        #region History
         List<HistoryItem> FindHistories(int limit, int offset, Item item, string search, bool? activo);
         int CountHistories(Item item, string search, bool? activo);
-        #endregion Historial
+        #endregion History
+
+        #region Group
+        Group GetGroupById(string id);
+        Group GetGroupByName(string name);
+        #endregion Group
     }
 }

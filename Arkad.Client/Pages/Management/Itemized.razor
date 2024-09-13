@@ -83,6 +83,14 @@ else
                                                         <textarea name="descripcion" class="form-control" id="descripcion">@ItemNew.Description</textarea>
                                                     </div>
                                                     <div class="col-sm-12">
+                                                        <div class="form-check">
+                                                            <InputCheckbox class="form-check-input" @bind-Value="ItemNew.Monthly" />
+                                                            <label class="form-check-label">
+                                                                ¿Es Mensual?
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-sm-12">
                                                         <label class="form-label">Tipo</label>
                                                         <select class="form-select" required @onchange="(e) => OnSelectChange(e)">
                                                             <option value="@(TypeEnum.VALUE)">Dato</option>
@@ -258,6 +266,14 @@ else
                                                                 <div class="col-sm-12">
                                                                     <label class="form-label">Descripción</label>
                                                                     <input name="descripcion" type="text" class="form-control" @bind-value="item.Description" />
+                                                                </div>
+                                                                <div class="col-sm-12">
+                                                                    <div class="form-check">
+                                                                        <InputCheckbox class="form-check-input" @bind-Value="item.Monthly" />
+                                                                        <label class="form-check-label">
+                                                                            ¿Es Mensual?
+                                                                        </label>
+                                                                    </div>
                                                                 </div>
                                                                 <div class="col-sm-12">
                                                                     <label class="form-label">Tipo</label>

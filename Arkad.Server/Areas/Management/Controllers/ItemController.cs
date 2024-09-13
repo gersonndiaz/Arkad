@@ -4,9 +4,11 @@ using Arkad.Server.Models;
 using Arkad.Shared;
 using Arkad.Shared.Utils.Formula;
 using Hefesto.Response;
+using Hefesto.Validation;
 using Mapster;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using NLog;
 using System.Net;
 using System.Web;
@@ -212,6 +214,8 @@ namespace Arkad.Server.Areas.Management.Controllers
 
                     #region DTO
                     var itemN = itemDao.GetByName(name);
+                    var group = (!String.IsNullOrEmpty(groupId) && DataTypeValidation.checkGuid(groupId))
+                                    ? itemDao.GetGroupById(groupId) : null;
                     User user = userDao.GetById(userId);
                     var role = (user is not null) ? userDao.GetRoleById(user.RoleId) : null;
                     #endregion DTO
@@ -307,48 +311,66 @@ namespace Arkad.Server.Areas.Management.Controllers
                     }
                     else
                     {
-                        if (bMandante.HasValue && bContratista.HasValue
-                            && bMandante.Value == true && bContratista.Value == true)
+                        var items = itemDao.GetAll(true);
+                        int position = 1;
+                        if (items is not null && items.Count > 0)
                         {
-                            bContratista = null;
+                            foreach(var mItem in items)
+                            {
+                                mItem.Position = position;
+                                position++;
+                            }
                         }
 
                         Item item = new()
                         {
                             Id = Guid.NewGuid().ToString(),
-                            Nombre = nombre,
-                            Descripcion = descripcion,
-                            BManual = (type.Equals("DATO", StringComparison.InvariantCultureIgnoreCase)) ? true : false,
-                            Posicion = 1,
-                            Tipo = tipo,
+                            Name = name,
+                            Description = description,
+                            Auto = (type.Equals("VALUE", StringComparison.InvariantCultureIgnoreCase)) ? false : true,
+                            Position = position,
+                            Type = type,
                             Formula = formula,
                             FormulaAux = formulaAux,
-                            FCreado = DateTime.Now,
-                            BMandante = bMandante,
-                            BContratista = bContratista,
+                            Monthly = monthly,
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true,
+                            GroupId = (group is not null) ? group.Id : null
+                        };
+
+                        History history = new()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Explanation = $"[{TagUtil.TAG_HISTORIAL_CREAR}]",
+                            Description = $"Se ha registrado un nuevo ítem:\n\n" +
+                                          $"* Nombre: {item.Name}\n" +
+                                          $"* Descripción: {item.Description}\n" +
+                                          $"* Tipo: {item.Type}\n" +
+                                          $"* Fórmula: {item.Formula}\n" +
+                                          $"* Fórmula Visible: {item.FormulaAux}\n" +
+                                          $"* Posición: {item.Position}\n" +
+                                          $"* Auto: {item.Auto}\n" +
+                                          $"* Mensual: {item.Monthly}\n" +
+                                          $"* Grupo: {((group is not null) ? group.Name : "")}\n",
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
                             Active = true
                         };
 
-                        HistorialItem historialItem = new()
+                        HistoryItem historyItem = new()
                         {
                             Id = Guid.NewGuid().ToString(),
-                            Glosa = $"[{TagUtil.TAG_HISTORIAL_CREAR}]",
-                            Descripcion = $"Se ha registrado un nuevo ítem:\n\n" +
-                                          $"* Nombre: {item.Nombre}\n" +
-                                          $"* Descripción: {item.Descripcion}\n" +
-                                          $"* Tipo: {item.Tipo}\n" +
-                                          $"* Fórmula: {item.Formula}\n" +
-                                          $"* Fórmula Visible: {item.FormulaAux}\n" +
-                                          $"* Posición: {item.Posicion}\n" +
-                                          $"* Asignación Mandante: {item.BMandante}\n" +
-                                          $"* Asignación Contratista: {item.BContratista}\n",
-                            FCreado = DateTime.Now,
+                            Data = JsonConvert.SerializeObject(item),
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
                             Active = true,
+                            HistoryId = history.Id,
                             ItemId = item.Id,
-                            UsuarioId = usuario.Id
+                            UserId = user.Id
                         };
 
-                        bool success = itemDao.Save(item, historialItem);
+                        bool success = itemDao.Save(item, history, historyItem);
 
                         if (success)
                         {
@@ -400,13 +422,14 @@ namespace Arkad.Server.Areas.Management.Controllers
                 string Authorization = Request.Headers[TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION].ToString();
 
                 string id = Request.Form["id"];
-                string nombre = Request.Form["nombre"];
-                string descripcion = Request.Form["descripcion"];
-                string tipo = Request.Form["tipo"];
+                string name = Request.Form["name"];
+                string description = Request.Form["description"];
+                string type = Request.Form["type"];
                 string formula = Request.Form["formula"];
                 string formulaAux = Request.Form["formulaAux"];
-                string sMandante = Request.Form["bMandante"];
-                string sContratista = Request.Form["bContratista"];
+                string sAuto = Request.Form["auto"];
+                string sMonthly = Request.Form["monthly"];
+                string groupId = Request.Form["groupId"];
 
                 if (String.IsNullOrEmpty(Authorization))
                 {
@@ -433,7 +456,7 @@ namespace Arkad.Server.Areas.Management.Controllers
                     response.message = "El ID del ítem seleccionado no es válido!";
                     response.httpCode = (int)httpStatusCode;
                 }
-                else if (String.IsNullOrEmpty(nombre))
+                else if (String.IsNullOrEmpty(name))
                 {
                     httpStatusCode = HttpStatusCode.BadRequest;
                     response.status = StatusResponseCodes.StatusResponseError;
@@ -441,7 +464,7 @@ namespace Arkad.Server.Areas.Management.Controllers
                     response.message = "El nombre del ítem es obligatorio!";
                     response.httpCode = (int)httpStatusCode;
                 }
-                else if (String.IsNullOrEmpty(tipo))
+                else if (String.IsNullOrEmpty(type))
                 {
                     httpStatusCode = HttpStatusCode.BadRequest;
                     response.status = StatusResponseCodes.StatusResponseError;
@@ -453,19 +476,19 @@ namespace Arkad.Server.Areas.Management.Controllers
                 {
                     string userId = SecurityUtils.GetValByTypeFromToken(Authorization, clientSecret, TagUtil.TAG_JWT_CLAIM_USUARIO_ID);
 
-                    nombre = nombre.Trim().ToUpper();
-                    descripcion = descripcion.Trim().ToUpper();
+                    name = name.Trim().ToUpper();
+                    description = description.Trim().ToUpper();
 
-                    bool? bMandante = null;
-                    if (!String.IsNullOrEmpty(sMandante))
+                    bool auto = false;
+                    if (!String.IsNullOrEmpty(sAuto))
                     {
-                        bMandante = (sMandante.Equals("True", StringComparison.InvariantCultureIgnoreCase)) ? true : null;
+                        auto = (sAuto.Equals("True", StringComparison.InvariantCultureIgnoreCase)) ? true : false;
                     }
 
-                    bool? bContratista = null;
-                    if (!String.IsNullOrEmpty(sContratista))
+                    bool monthly = false;
+                    if (!String.IsNullOrEmpty(sMonthly))
                     {
-                        bContratista = (sContratista.Equals("True", StringComparison.InvariantCultureIgnoreCase)) ? true : null;
+                        monthly = (sMonthly.Equals("True", StringComparison.InvariantCultureIgnoreCase)) ? true : false;
                     }
 
                     #region DAO
@@ -475,7 +498,9 @@ namespace Arkad.Server.Areas.Management.Controllers
 
                     #region DTO
                     var item = itemDao.GetById(id);
-                    var itemN = itemDao.GetByNombre(nombre);
+                    var itemN = itemDao.GetByName(name);
+                    var group = (!String.IsNullOrEmpty(groupId) && DataTypeValidation.checkGuid(groupId))
+                                    ? itemDao.GetGroupById(groupId) : null;
                     User user = userDao.GetById(userId);
                     var role = (user is not null) ? userDao.GetRoleById(user.RoleId) : null;
                     #endregion DTO
@@ -484,7 +509,7 @@ namespace Arkad.Server.Areas.Management.Controllers
                     string formulaIsValid = null;
                     try
                     {
-                        if (type.Equals("DATO", StringComparison.InvariantCultureIgnoreCase))
+                        if (type.Equals("VALUE", StringComparison.InvariantCultureIgnoreCase))
                         {
                             typeIsValid = true;
                         }
@@ -555,8 +580,8 @@ namespace Arkad.Server.Areas.Management.Controllers
                         response.status = StatusResponseCodes.StatusResponseError;
                         response.subject = "Error";
                         response.message = (itemN.Active)
-                                                ? $"El ítem de nombre {nombre} ya existe!"
-                                                : $"El ítem de nombre {nombre} ya existe y puede activarlo para su uso!";
+                                                ? $"El ítem de nombre {name} ya existe!"
+                                                : $"El ítem de nombre {name} ya existe y puede activarlo para su uso!";
                         response.httpCode = (int)httpStatusCode;
                     }
                     else if (!typeIsValid)
@@ -564,7 +589,7 @@ namespace Arkad.Server.Areas.Management.Controllers
                         httpStatusCode = HttpStatusCode.OK;
                         response.status = StatusResponseCodes.StatusResponseError;
                         response.subject = "Error";
-                        response.message = $"El tipo [{tipo}] no es válido!";
+                        response.message = $"El tipo [{type}] no es válido!";
                         response.httpCode = (int)httpStatusCode;
                     }
                     else if (typeIsValid
@@ -582,42 +607,48 @@ namespace Arkad.Server.Areas.Management.Controllers
                         var jItemCurrent = JsonConvert.SerializeObject(item);
                         var itemCurrent = JsonConvert.DeserializeObject<Item>(jItemCurrent);
 
-                        if (bMandante.HasValue && bContratista.HasValue
-                            && bMandante.Value == true && bContratista.Value == true)
-                        {
-                            bContratista = null;
-                        }
-
-                        item.Nombre = nombre;
-                        item.Descripcion = descripcion;
-                        item.Tipo = tipo;
-                        item.BManual = (type.Equals("DATO", StringComparison.InvariantCultureIgnoreCase)) ? true : false;
-                        item.Tipo = tipo;
+                        item.Name = name;
+                        item.Description = description;
+                        item.Type = type;
+                        item.Auto = (type.Equals("VALUE", StringComparison.InvariantCultureIgnoreCase)) ? false : true;
                         item.Formula = formula;
                         item.FormulaAux = formulaAux;
-                        item.BMandante = bMandante;
-                        item.BContratista = bContratista;
+                        item.Monthly = monthly;
+                        item.ModifiedDate = DateTime.Now;
+                        item.GroupId = (group is not null) ? group.Id : null;
 
-                        HistorialItem historialItem = new()
+                        History history = new()
                         {
                             Id = Guid.NewGuid().ToString(),
-                            Glosa = $"[{TagUtil.TAG_HISTORIAL_MODIFICAR}]",
-                            Descripcion = $"Se ha actualizado el ítem:\n\n" +
-                                          $"* Nombre: {itemCurrent.Nombre} => {item.Nombre}\n" +
-                                          $"* Descripción: {itemCurrent.Nombre} => {item.Descripcion}\n" +
-                                          $"* Tipo: {itemCurrent.Nombre} => {item.Tipo}\n" +
-                                          $"* Fórmula: {itemCurrent.Nombre} => {item.Formula}\n" +
-                                          $"* Fórmula Visible: {itemCurrent.Nombre} => {item.FormulaAux}\n" +
-                                          $"* Posición: {itemCurrent.Nombre} => {item.Posicion}\n" +
-                                          $"* Asignación Mandante: {itemCurrent.BMandante} => {itemCurrent.BMandante}\n" +
-                                          $"* Asignación Contratista: {itemCurrent.BContratista} => {itemCurrent.BContratista}\n",
-                            FCreado = DateTime.Now,
-                            Active = true,
-                            ItemId = item.Id,
-                            UsuarioId = usuario.Id
+                            Explanation = $"[{TagUtil.TAG_HISTORIAL_MODIFICAR}]",
+                            Description = $"Se ha actualizado el ítem:\n\n" +
+                                          $"* Nombre: {itemCurrent.Name} => {item.Name}\n" +
+                                          $"* Descripción: {itemCurrent.Description} => {item.Description}\n" +
+                                          $"* Tipo: {itemCurrent.Type} => {item.Type}\n" +
+                                          $"* Fórmula: {itemCurrent.Formula} => {item.Formula}\n" +
+                                          $"* Fórmula Visible: {itemCurrent.FormulaAux} => {item.FormulaAux}\n" +
+                                          $"* Posición: {itemCurrent.Position} => {item.Position}\n" +
+                                          $"* Auto: {itemCurrent.Auto} => {item.Auto}\n" +
+                                          $"* Mensual: {itemCurrent.Monthly} => {item.Monthly}\n" +
+                                          $"* Grupo: {((itemCurrent.Group is not null) ? itemCurrent.Group.Name : "")} => {((group is not null) ? group.Name : "")}",
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true
                         };
 
-                        bool success = itemDao.Update(item, historialItem);
+                        HistoryItem historyItem = new()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Data = JsonConvert.SerializeObject(item),
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true,
+                            HistoryId = history.Id,
+                            ItemId = item.Id,
+                            UserId = user.Id
+                        };
+
+                        bool success = itemDao.Update(item, history, historyItem);
 
                         if (success)
                         {
@@ -747,20 +778,34 @@ namespace Arkad.Server.Areas.Management.Controllers
                         bool estadoActual = item.Active;
 
                         item.Active = (item.Active) ? false : true;
+                        item.ModifiedDate = DateTime.Now;
 
-                        HistorialItem historialItem = new HistorialItem();
-                        historialItem.Id = Guid.NewGuid().ToString();
-                        historialItem.Glosa = (item.Active)
+                        History history = new()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Explanation = (item.Active)
                                                         ? $"[{TagUtil.TAG_HISTORIAL_ACTIVAR}]"
-                                                        : $"[{TagUtil.TAG_HISTORIAL_DESACTIVAR}]";
-                        historialItem.Descripcion = $"Se ha modificado el ítem:\n\n" +
-                            $"* Estado: {estadoActual} => {item.Active}";
-                        historialItem.FCreado = DateTime.Now;
-                        historialItem.Active = true;
-                        historialItem.ItemId = item.Id;
-                        historialItem.UsuarioId = usuario.Id;
+                                                        : $"[{TagUtil.TAG_HISTORIAL_DESACTIVAR}]",
+                            Description = $"Se ha modificado el ítem:\n\n" +
+                                          $"* Estado: {estadoActual} => {item.Active}",
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true
+                        };
 
-                        bool success = itemDao.Update(item, historialItem);
+                        HistoryItem historyItem = new()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Data = JsonConvert.SerializeObject(item),
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true,
+                            HistoryId = history.Id,
+                            ItemId = item.Id,
+                            UserId = user.Id
+                        };
+
+                        bool success = itemDao.Update(item, history, historyItem);
 
                         if (success)
                         {
@@ -881,29 +926,44 @@ namespace Arkad.Server.Areas.Management.Controllers
                     {
                         int posicion = 1;
                         List<Item> mItems = new List<Item>();
-                        List<HistorialItem> historialItems = new List<HistorialItem>();
+                        List<History> histories = new List<History>();
+                        List<HistoryItem> historyItems = new List<HistoryItem>();
                         foreach (var item in items)
                         {
                             var mItem = itemDao.GetById(item.Id);
-                            mItem.Posicion = posicion;
+                            mItem.Position = posicion;
 
-                            HistorialItem historialItem = new HistorialItem();
-                            historialItem.Id = Guid.NewGuid().ToString();
-                            historialItem.Glosa = $"[{TagUtil.TAG_HISTORIAL_MODIFICAR}]";
-                            historialItem.Descripcion = $"Se ha modificado el ítem:\n\n" +
-                                $"* Posición: {item.Posicion} => {mItem.Posicion}";
-                            historialItem.FCreado = DateTime.Now;
-                            historialItem.Active = true;
-                            historialItem.ItemId = mItem.Id;
-                            historialItem.UsuarioId = usuario.Id;
+                            History history = new()
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                Explanation = $"[{TagUtil.TAG_HISTORIAL_MODIFICAR}]",
+                                Description = $"Se ha modificado el ítem:\n\n" +
+                                              $"* Posición: {item.Position} => {mItem.Position}",
+                                CreatedDate = DateTime.Now,
+                                ModifiedDate = DateTime.Now,
+                                Active = true
+                            };
+
+                            HistoryItem historyItem = new()
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                Data = JsonConvert.SerializeObject(item),
+                                CreatedDate = DateTime.Now,
+                                ModifiedDate = DateTime.Now,
+                                Active = true,
+                                HistoryId = history.Id,
+                                ItemId = item.Id,
+                                UserId = user.Id
+                            };
 
                             mItems.Add(mItem);
-                            historialItems.Add(historialItem);
+                            histories.Add(history);
+                            historyItems.Add(historyItem);
 
                             posicion++;
                         }
 
-                        bool success = itemDao.Update(mItems, historialItems);
+                        bool success = itemDao.Update(mItems, histories, historyItems);
 
                         if (success)
                         {
@@ -940,7 +1000,7 @@ namespace Arkad.Server.Areas.Management.Controllers
         }
         #endregion Items
 
-        #region Historial
+        #region Histories
         [HttpGet("v1/historial")]
         [Produces("application/json")]
         public async Task<ResponseGenericModel> FindHistorial()
@@ -1030,8 +1090,8 @@ namespace Arkad.Server.Areas.Management.Controllers
                     var item = itemDao.GetById(itemId);
                     User user = userDao.GetById(userId);
                     var role = (user is not null) ? userDao.GetRoleById(user.RoleId) : null;
-                    var historial = itemDao.FindHistorial(limit, offset, item, search, true);
-                    countTotal = itemDao.CountHistorial(item, search, true);
+                    var histories = itemDao.FindHistories(limit, offset, item, search, true);
+                    countTotal = itemDao.CountHistories(item, search, true);
                     var totalPages = Hefesto.Helpers.Utils.calculateTotalPages(countTotal, limit);
                     #endregion DTO
 
@@ -1061,28 +1121,26 @@ namespace Arkad.Server.Areas.Management.Controllers
                     }
                     else
                     {
-                        List<Shared.Models.HistorialItem> mHistorial = new List<Shared.Models.HistorialItem>();
+                        List<Shared.Models.HistoryItem> vHistories = new List<Shared.Models.HistoryItem>();
 
-                        if (historial is not null && historial.Count() > 0)
+                        if (histories is not null && histories.Count() > 0)
                         {
-                            foreach (var h in historial)
+                            foreach (var h in histories)
                             {
-                                var hr = new Shared.Models.HistorialItem();
+                                var hr = new Shared.Models.HistoryItem();
                                 hr.Id = h.Id;
-                                hr.Glosa = h.Glosa;
-                                hr.Descripcion = h.Descripcion;
-                                hr.FCreado = h.FCreado;
-                                hr.Item = item.Nombre;
-                                hr.Usuario = usuario.Nombre;
+                                hr.CreatedDate = h.CreatedDate;
+                                hr.UserName = user.Name;
+                                hr.History = h.History.Adapt<Shared.Models.History>();
 
-                                mHistorial.Add(hr);
+                                vHistories.Add(hr);
                             }
                         }
 
                         object data = new
                         {
-                            item = item.Nombre,
-                            historial = mHistorial,
+                            item = item.Name,
+                            histories = vHistories,
                             totalData = countTotal,
                             totalPages = totalPages,
                         };
@@ -1110,6 +1168,6 @@ namespace Arkad.Server.Areas.Management.Controllers
             this.HttpContext.Response.StatusCode = httpStatusCode.GetHashCode();
             return response;
         }
-        #endregion Historial
+        #endregion Histories
     }
 }

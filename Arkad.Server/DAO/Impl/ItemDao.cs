@@ -2,6 +2,7 @@
 using Arkad.Server.Models._Context;
 using Microsoft.EntityFrameworkCore;
 using NLog;
+using System.Drawing;
 using System.Linq.Expressions;
 
 namespace Arkad.Server.DAO.Impl
@@ -338,7 +339,7 @@ namespace Arkad.Server.DAO.Impl
         }
         #endregion Item
 
-        #region Historial
+        #region History
         /// <summary>
         /// Obtiene listado de registros encontrados
         /// </summary>
@@ -430,6 +431,50 @@ namespace Arkad.Server.DAO.Impl
                 throw;
             }
         }
-        #endregion Historial
+        #endregion History
+
+        #region Group
+        /// <summary>
+        /// Obtiene un grupo por su ID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public Group GetGroupById(string id)
+        {
+            try
+            {
+                var group = appDbContext.Groups
+                                    .Where(x => x.Id == id)
+                                    .FirstOrDefault();
+                return group;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"[{TAG}] - {ex}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Obtiene un grupo por su nombre
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public Group GetGroupByName(string name)
+        {
+            try
+            {
+                var group = appDbContext.Groups
+                                    .Where(x => x.Name == name)
+                                    .FirstOrDefault();
+                return group;
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"[{TAG}] - {ex}");
+                throw;
+            }
+        }
+        #endregion Group
     }
 }
