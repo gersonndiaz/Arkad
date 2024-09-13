@@ -6,7 +6,6 @@ using Arkad.Shared.Utils.Formula;
 using Hefesto.Response;
 using Hefesto.Validation;
 using Mapster;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NLog;

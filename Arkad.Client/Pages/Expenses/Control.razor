@@ -1,0 +1,726 @@
+﻿@layout MainLayout
+@page "/expenses/control"
+@using Arkad.Client.Shared.Components
+@using Arkad.Shared
+@using Arkad.Shared.Models
+@using Arkad.Shared.Utils.Formula
+@using Hefesto.Response
+@using Microsoft.AspNetCore.Components.Forms
+@using Newtonsoft.Json
+@using System.Diagnostics
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+@if (IsLoading)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12 text-center">
+            <h1>Cargando...</h1>
+        </div>
+    </div>
+
+    <hr />
+}
+else if (Period is null)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12 text-center alert alert-danger" role="alert">
+            <p class="p-3">No hay periodos activos</p>
+        </div>
+    </div>
+
+    <hr />
+}
+else if (Expenses is null)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12">
+            <h1>Control de Gastos</h1>
+            <h4>Periodo: @Period.Year/@Period.Month.ToString("D2")</h4>
+        </div>
+    </div>
+
+    <hr />
+
+    <p>No hay indicadores disponibles</p>
+}
+else
+{
+    <hr />
+    <div class="row">
+        <div class="col-12">
+            <h1>Control de Gastos</h1>
+            <h4>Periodo: @Period.Year/@Period.Month.ToString("D2")</h4>
+        </div>
+    </div>
+
+    <hr />
+
+    <div class="row">
+        <div class="co-12">
+
+            <!--#region Filtros-->
+            <div class="card">
+                <div class="card-body">
+                    <div class="col-sm-12">
+                        <div class="text-end">
+
+                            @if (Role.Code.Equals("SYSADMIN", StringComparison.InvariantCultureIgnoreCase)
+                                || Role.Code.Equals("ADMIN", StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                if (ExpenseControl is not null && ExpenseControl.Finished)
+                                {
+                                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#openModal">
+                                        <i class="fa-solid fa-unlock-keyhole"></i> Reabrir
+                                    </button>
+
+                                    <div class="modal fade" id="openModal" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="openModalLabel">
+                                                        Reabrir periodo
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body text-black-50 text-start">
+                                                    <div class="row">
+                                                        <div class="col-sm-12 text-center">
+                                                            ¿Esta seguro que desea reabrir el periodo?
+                                                        </div>
+                                                        <EditForm id="formOpen" Model="ExpenseControl" OnValidSubmit="Open"></EditForm>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button class="btn btn-success" form="formOpen" type="submit">Abrir</button>
+                                                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#finishModal">
+                                        <i class="fa-solid fa-lock"></i> Finalizar
+                                    </button>
+
+                                    <div class="modal fade" id="finishModal" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="finishModalLabel">
+                                                        Cerrar periodo
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body text-black-50 text-start">
+                                                    <div class="row">
+                                                        <div class="col-sm-12 text-center">
+                                                            ¿Esta seguro que desea finalizar y cerrar el periodo con la información ingresada?
+                                                        </div>
+                                                        <EditForm id="formFinish" Model="Expenses" OnValidSubmit="Finish"></EditForm>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button class="btn btn-success" form="formFinish" type="submit">Finalizar</button>
+                                                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+
+                            @if (ExpenseControl is null || !ExpenseControl.Finished)
+                            {
+                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#saveMandante">
+                                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                                </button>
+
+                                <div class="modal fade" id="saveMandante" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="saveMandanteLabel">
+                                                    Guardar información
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body text-black-50 text-start">
+                                                <div class="row">
+                                                    <div class="col-sm-12 text-center">
+                                                        ¿Esta seguro que desea guardar la información ingresada?
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button class="btn btn-success" form="formExpenses" type="submit">Guardar</button>
+                                                <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--#endregion Filtros-->
+        </div>
+
+        <hr />
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+
+            <EditForm id="formExpenses" Model="Expenses" OnSubmit="@Save">
+
+                <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="pills-expenses-tab" data-bs-toggle="pill" data-bs-target="#pills-expenses" type="button" role="tab" aria-controls="pills-expenses" aria-selected="true">
+                            Control
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="pills-tabContent">
+                    <div class="tab-pane fade show active" id="pills-expenses" role="tabpanel" aria-labelledby="pills-expenses-tab" tabindex="0">
+
+                        @if (Expenses is not null && Expenses.Count > 0)
+                        {
+                            @foreach (var expense in Expenses)
+                            {
+                                <div class="row">
+                                    <div class="col-sm-12 col-md-6">
+                                        <label class="form-label">@expense.Item.Name</label>
+                                    </div>
+                                    <div class="col-sm-12 col-md-6">
+                                        @if (IsFinished)
+                                        {
+                                            <input type="number" class="form-control" step=".001"
+                                                   disabled
+                                                   @bind-value="expense.Value"
+                                                   @oninput="(e) => OnInputChange(expense, e.Value.ToString(), expense.Value)" />
+                                        }
+                                        else
+                                        {
+                                            <input type="number" class="form-control" step=".001"
+                                                   disabled="@((expense.Item.Type != "VALUE"))"
+                                                   @bind-value="expense.Value"
+                                                   @oninput="(e) => OnInputChange(expense, e.Value.ToString(), expense.Value)" />
+                                        }
+                                    </div>
+                                </div>
+                                <hr />
+                            }
+                        }
+                        else
+                        {
+                            <p>No hay ítems disponibles</p>
+                        }
+
+                    </div>
+                </div>
+
+            </EditForm>
+        </div>
+    </div>
+}
+
+<ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code {
+    public bool Status { get; set; } = true;
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    public string Authorization { get; set; }
+    public bool IsLoading { get; set; } = true;
+
+    private List<FormulaItem> AvailableOperators { get; set; }
+
+    private ResponseGenericModel ResponseModel { get; set; }
+    private Data ResponseData { get; set; }
+
+    public Period Period { get; set; }
+    public List<Item> Items { get; set; }
+    public List<Expense> Expenses { get; set; }
+    public ExpenseControl ExpenseControl { get; set; }
+    public Role Role { get; set; }
+
+    // Crear la lista de variables que se pasará a ValidateAndReplaceFormula
+    List<FormulaVariable> ExpensesFormulaCalc { get; set; } = new List<FormulaVariable>();
+
+    private bool IsFinished { get; set; } = false;
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await GetContent();
+
+            IsLoading = false;
+
+            if (Expenses is not null && Expenses.Count > 0)
+            {
+                foreach (var expense in Expenses)
+                {
+                    var existingVariable = ExpensesFormulaCalc.FirstOrDefault(x => x.Id == expense.Id);
+
+                    if (existingVariable is null)
+                    {
+                        ExpensesFormulaCalc.Add(new FormulaVariable { Id = expense.Id, Value = expense.Value });
+                    }
+                }
+            }
+
+            StateHasChanged(); // Forzar renderizado
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page de forma asincrona
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        AvailableOperators = FormulaUtil.AvailableOperators();
+
+        await base.OnInitializedAsync();
+    }
+
+    string GetQueryParam(string parmName)
+    {
+        var uriBuilder = new UriBuilder(NavigationManager.Uri);
+        var q = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+        return q[parmName] ?? "";
+    }
+
+    private async void OnInputChange(Expense expense, string newValue, double val)
+    {
+        #region Asigna valor
+        double nValue = val;
+
+        try
+        {
+            nValue = float.Parse(newValue.Replace(".", ","));
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[OnInputChange]: {e}");
+            nValue = 0;
+            val = 0;
+        }
+        #endregion Asigna valor
+
+        try
+        {
+            if (Expenses is not null && Expenses.Count > 0)
+            {
+                foreach (var mExpense in Expenses)
+                {
+                    if (mExpense.Item.Formula.Contains(expense.Id, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine($"[OnInputChange]: Item '{mExpense.Item.Name}' encontrado con la formula {mExpense.Item.FormulaAux}");
+
+                        try
+                        {
+                            // Verificar si el ID ya existe en la lista
+                            var existingVariable = ExpensesFormulaCalc.FirstOrDefault(x => x.Id == expense.Id);
+
+                            if (existingVariable != null)
+                            {
+                                // Si el ID ya existe, actualiza el valor
+                                existingVariable.Value = nValue;
+                                Console.WriteLine($"[OnInputChange]: Actualizado ID '{expense.Id}' con nuevo valor: {nValue}");
+                            }
+                            else
+                            {
+                                // Si el ID no existe, agrégalo a la lista
+                                ExpensesFormulaCalc.Add(new FormulaVariable { Id = expense.Id, Value = nValue });
+                                Console.WriteLine($"[OnInputChange]: Agregado ID '{expense.Id}' con valor: {nValue}");
+                            }
+
+                            // Verificar el contenido de la lista después de la actualización
+                            foreach (var variable in ExpensesFormulaCalc)
+                            {
+                                Console.WriteLine($"[Verificar Datos] ID: {variable.Id}, Valor: {variable.Value}");
+                            }
+
+                            // Llamar a la función de validación y cálculo
+                            float resultado = FormulaUtil.ValidateAndReplaceFormula(expense.Item.Formula, ExpensesFormulaCalc);
+                            Console.WriteLine($"[OnInputChange]: Resultado de la fórmula calculada: {resultado}");
+
+                            mExpense.Value = resultado;
+
+                            // Llamada recursiva para manejar cualquier cadena de dependencias
+                            await RecalcularDependencias(expense.Id, resultado);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($"[OnInputChange]: {e.Message}");
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[OnInputChange]: Error al procesar la fórmula: {e.Message}");
+        }
+
+        Console.WriteLine($"[OnInputChange(Expense expense, string newValue, double val)]: {expense.Item.FormulaAux} ; {val} => {nValue}");
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+
+    // Método para recalcular dependencias
+    private async Task RecalcularDependencias(string id, double nValue)
+    {
+        if (Expenses is not null && Expenses.Count > 0)
+        {
+            foreach (var expense in Expenses)
+            {
+                if (expense.Item.Formula.Contains(id, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    Console.WriteLine($"[OnInputChange]: Item '{expense.Item.Name}' encontrado con la formula {expense.Item.FormulaAux}");
+
+                    try
+                    {
+                        // Verificar si el ID ya existe en la lista
+                        var existingVariable = ExpensesFormulaCalc.FirstOrDefault(x => x.Id == id);
+
+                        if (existingVariable != null)
+                        {
+                            // Si el ID ya existe, actualiza el valor
+                            existingVariable.Value = nValue;
+                            Console.WriteLine($"[OnInputChange]: Actualizado ID '{id}' con nuevo valor: {nValue}");
+                        }
+                        else
+                        {
+                            // Si el ID no existe, agrégalo a la lista
+                            ExpensesFormulaCalc.Add(new FormulaVariable { Id = id, Value = nValue });
+                            Console.WriteLine($"[OnInputChange]: Agregado ID '{id}' con valor: {nValue}");
+                        }
+
+                        // Verificar el contenido de la lista después de la actualización
+                        foreach (var variable in ExpensesFormulaCalc)
+                        {
+                            Console.WriteLine($"[Verificar Datos] ID: {variable.Id}, Valor: {variable.Value}");
+                        }
+
+                        // Llamar a la función de validación y cálculo
+                        float resultado = FormulaUtil.ValidateAndReplaceFormula(expense.Item.Formula, ExpensesFormulaCalc);
+                        Console.WriteLine($"[OnInputChange]: Resultado de la fórmula calculada: {resultado}");
+
+                        expense.Value = resultado;
+
+                        // Llamada recursiva para manejar cualquier cadena de dependencias
+                        await RecalcularDependencias(expense.Id, resultado);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"[OnInputChange]: {e.Message}");
+                    }
+                }
+            }
+        }
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+
+
+
+    private async Task GetContent()
+    {
+        try
+        {
+            Authorization = await LocalStorageComponent.Get("Authorization");
+
+            try
+            {
+                Http.DefaultRequestHeaders.Add("Authorization", Authorization);
+            }
+            catch { }
+
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/expense/conrol/v1/get");
+
+            try
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", jsonResponse);
+
+                try
+                {
+                    ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(jsonResponse);
+
+                    if (ResponseModel.status.Equals("success", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        try
+                        {
+                            ResponseData = JsonConvert.DeserializeObject<Data>($"{ResponseModel.data}");
+                            Period = ResponseData.Period;
+                            Items = ResponseData.Items;
+                            Expenses = ResponseData.Expenses;
+                            Role = ResponseData.Role;
+                            ExpenseControl = ResponseData.ExpenseControl;
+
+                            if (ExpenseControl is not null)
+                            {
+                                IsFinished = ExpenseControl.Finished;
+                                Expenses = JsonConvert.DeserializeObject<List<Expense>>(ExpenseControl.Data);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            //
+                        }
+                    }
+                    else
+                    {
+                        if (!String.IsNullOrEmpty(ResponseModel.urlRedirect))
+                        {
+                            await Task.Delay(2000);
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+
+                            // Redirigir a otra URL
+                            NavigationManager.NavigateTo(ResponseModel.urlRedirect);
+                        }
+                        else
+                        {
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    await JS.InvokeVoidAsync("console.log", $"Error 0: {e}");
+                }
+            }
+            catch (Exception e)
+            {
+                await JS.InvokeVoidAsync("console.log", $"Error 1: {e}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JS.InvokeVoidAsync("console.log", $"Error 2: {e}");
+        }
+
+        IsLoading = false;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+    private async Task Save()
+    {
+        TitleLoading = "Guardando información...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            string jExpenses = JsonConvert.SerializeObject(Expenses);
+
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("expenses", jExpenses)
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/indicators/accident/v1/save");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+            await JS.InvokeVoidAsync("alert", $"Error: {e.Message}");
+        }
+
+        Status = true;
+
+        await GetContent();
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task Finish()
+    {
+        TitleLoading = "Finalizando y cerrando periodo...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            string jExpenses = JsonConvert.SerializeObject(Expenses);
+
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("expenses", jExpenses)
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/indicators/accident/v1/finish");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+            await JS.InvokeVoidAsync("alert", $"Error: {e.Message}");
+        }
+
+        Status = true;
+
+        await GetContent();
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task Open()
+    {
+        TitleLoading = "Abriendo periodo...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("expenseControlId", ExpenseControl.Id)
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/indicators/accident/v1/open");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+            await JS.InvokeVoidAsync("alert", $"Error: {e.Message}");
+        }
+
+        Status = true;
+
+        await GetContent();
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+
+    public class Data
+    {
+        [JsonProperty("period")]
+        public Period Period;
+
+        [JsonProperty("items")]
+        public List<Item> Items;
+
+        [JsonProperty("expenses")]
+        public List<Expense> Expenses;
+
+        [JsonProperty("control")]
+        public ExpenseControl ExpenseControl;
+
+        [JsonProperty("role")]
+        public Role Role;
+    }
+}
