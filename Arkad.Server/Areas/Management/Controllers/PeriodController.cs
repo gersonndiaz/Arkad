@@ -965,7 +965,7 @@ namespace Arkad.Server.Areas.Management.Controllers
         }
         #endregion Periods
 
-        #region Historial
+        #region Histories
         [HttpGet("v1/history")]
         [Produces("application/json")]
         public async Task<ResponseGenericModel> FindHistory()
@@ -1133,6 +1133,6 @@ namespace Arkad.Server.Areas.Management.Controllers
             this.HttpContext.Response.StatusCode = httpStatusCode.GetHashCode();
             return response;
         }
-        #endregion Historial
+        #endregion Histories
     }
 }

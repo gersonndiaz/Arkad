@@ -44,7 +44,7 @@ else
                     <div class="col-sm-12">
                         <div class="text-end">
 
-                            @if (!Estado)
+                            @if (!Status)
                             {
                                 <a @onclick="() => GetItems(true)" class="btn btn-success">
                                     <i class="fa-solid fa-filter"></i> Activos
@@ -80,7 +80,7 @@ else
                                                     </div>
                                                     <div class="col-sm-12">
                                                         <label for="descripcion" class="form-label">Descripción</label>
-                                                        <textarea name="descripcion" class="form-control" id="descripcion">@ItemNew.Description</textarea>
+                                                        <InputTextArea name="descripcion" class="form-control" @bind-Value="ItemNew.Description" />
                                                     </div>
                                                     <div class="col-sm-12">
                                                         <div class="form-check">
@@ -237,7 +237,7 @@ else
                                     <td>@item.FormulaAux</td>
                                     <td>@item.CreatedDate.ToString("dd/MM/yyyy HH:mm:ss")</td>
                                     <td>
-                                        <a href="/gestion/itemizado/historial?itemId=@item.Id" class="btn btn-info">
+                                        <a href="/management/itemized/history?itemId=@item.Id" class="btn btn-info">
                                             <i class="fas fa-history"></i> Historial
                                         </a>
                                     </td>
@@ -265,7 +265,7 @@ else
                                                                 </div>
                                                                 <div class="col-sm-12">
                                                                     <label class="form-label">Descripción</label>
-                                                                    <input name="descripcion" type="text" class="form-control" @bind-value="item.Description" />
+                                                                    <InputTextArea name="descripcion" class="form-control" @bind-Value="item.Description" />
                                                                 </div>
                                                                 <div class="col-sm-12">
                                                                     <div class="form-check">
@@ -392,7 +392,7 @@ else
 <LocalStorageComponent @ref="LocalStorageComponent" />
 
 @code {
-    public bool Estado { get; set; } = true;
+    public bool Status { get; set; } = true;
 
     // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
     private string Title { get; set; }
@@ -515,13 +515,13 @@ else
 
 
 
-    private async Task GetItems(bool estado)
+    private async Task GetItems(bool status)
     {
         try
         {
             Authorization = await LocalStorageComponent.Get("Authorization");
 
-            Estado = estado;
+            Status = status;
 
             try
             {
@@ -529,7 +529,7 @@ else
             }
             catch { }
 
-            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/management/item/v1/get?estado={Estado}");
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/management/item/v1/get?status={Status}");
 
             try
             {
@@ -643,9 +643,9 @@ else
             await JS.InvokeVoidAsync("console.log", $"Error: {e}");
         }
 
-        Estado = true;
+        Status = true;
 
-        await GetItems(Estado);
+        await GetItems(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
     }
@@ -705,7 +705,7 @@ else
             await JS.InvokeVoidAsync("console.log", $"Error: {e}");
         }
 
-        await GetItems(Estado);
+        await GetItems(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
     }
@@ -757,7 +757,7 @@ else
             await JS.InvokeVoidAsync("console.log", $"Error: {e}");
         }
 
-        await GetItems(Estado);
+        await GetItems(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
     }
@@ -809,7 +809,7 @@ else
             await JS.InvokeVoidAsync("console.log", $"Error: {e}");
         }
 
-        await GetItems(Estado);
+        await GetItems(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
     }

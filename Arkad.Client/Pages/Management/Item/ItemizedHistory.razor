@@ -1,0 +1,274 @@
+﻿@layout MainLayout
+@page "/management/itemized/history"
+@using Arkad.Client.Shared.Components
+@using Arkad.Shared.Models
+@using Hefesto.Response
+@using Newtonsoft.Json
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+@if (IsLoading)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12 text-center">
+            <h1>Cargando...</h1>
+        </div>
+    </div>
+
+    <hr />
+}
+else
+{
+    <hr />
+    <div class="row">
+        <div class="col-12">
+            <h1>Historial Ítem: [@ItemName]</h1>
+        </div>
+    </div>
+
+    <hr />
+
+    <div class="row">
+        <div class="col-12">
+
+            <!--#region Filtros-->
+            <div class="card">
+                <div class="card-body">
+
+                    <div class="row">
+                        <div class="col-sm-12 col-md-6">
+                            <div class="input-group mb-3">
+                                <button type="button" class="btn btn-outline-primary" aria-describedby="button-search" data-bs-toggle="popover" title="Detalle" data-bs-content="Al ingresar una palabra clave, permite buscar en el contenido de los datos.">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
+                                <input name="search" type="text" class="form-control" placeholder="Buscar" aria-label="Buscar" aria-describedby="button-search" @bind-value="@Search">
+                                <button class="btn btn-outline-info" type="submit" id="button-search" @onclick="() => GetHistorial()">
+                                    <i class="fas fa-search"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-md-6"></div>
+                    </div>
+
+                </div>
+            </div>
+
+            <hr />
+            <!--#endregion Filtros-->
+            @if (Histories != null && Histories.Count > 0)
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-bordered">
+                        <thead class="text-center">
+                            <tr>
+                                <th>Glosa</th>
+                                <th>Descripción</th>
+                                <th>Fecha</th>
+                                <th>Usuario</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var history in Histories)
+                            {
+                                <tr>
+                                    <td>@history.History.Explanation</td>
+                                    <td>@history.History.Description</td>
+                                    <td>@history.CreatedDate.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                    <td>@history.UserName</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <PaginationComponent Page="Page" Search="Search" TotalPage="TotalPage" PageChanged="OnPageChanged"></PaginationComponent>
+            }
+            else
+            {
+                <p>No hay registros</p>
+            }
+        </div>
+    </div>
+}
+
+<ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code {
+    public string ItemName { get; set; } = "";
+
+    [SupplyParameterFromQuery(Name = "itemId")]
+    public string ItemId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")]
+    public int Page { get; set; } = 1;
+
+    [SupplyParameterFromQuery(Name = "seach")]
+    private string Search { get; set; }
+
+    private int TotalPage { get; set; } = 0;
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    // Objeto que hace referencia a un componente de paginación
+    private PaginationComponent PaginationComponent;
+
+    public string Authorization { get; set; }
+    public bool IsLoading { get; set; } = true;
+
+    private ResponseGenericModel ResponseModel { get; set; }
+    private Data ResponseData { get; set; }
+    private List<HistoryItem> Histories { get; set; }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await GetHistorial();
+
+            IsLoading = false;
+
+            StateHasChanged(); // Forzar renderizado
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page de forma asincrona
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    string GetQueryParam(string parmName)
+    {
+        var uriBuilder = new UriBuilder(NavigationManager.Uri);
+        var q = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+        return q[parmName] ?? "";
+    }
+
+    // Este método se llamará cuando cambies la página
+    private async Task OnPageChanged(int newPage)
+    {
+        Page = newPage;
+        Console.WriteLine($"Página seleccionada: {Page}");
+
+        // Llama al método para cargar los datos de la nueva página
+        await GetHistorial();
+    }
+
+    private async Task GetHistorial()
+    {
+        try
+        {
+            Authorization = await LocalStorageComponent.Get("Authorization");
+
+            try
+            {
+                Http.DefaultRequestHeaders.Add("Authorization", Authorization);
+            }
+            catch { }
+
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/management/item/v1/history?itemId={ItemId}&page={Page}&search={Search}");
+
+            try
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", jsonResponse);
+
+                try
+                {
+                    ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(jsonResponse);
+
+                    if (ResponseModel.status.Equals("success", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        try
+                        {
+                            ResponseData = JsonConvert.DeserializeObject<Data>($"{ResponseModel.data}");
+
+                            ItemName = ResponseData.ItemName;
+                            Histories = ResponseData.Histories;
+                            TotalPage = ResponseData.TotalPages;
+                        }
+                        catch (Exception e)
+                        {
+                            //
+                        }
+                    }
+                    else
+                    {
+                        if (!String.IsNullOrEmpty(ResponseModel.urlRedirect))
+                        {
+                            await Task.Delay(2000);
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+
+                            // Redirigir a otra URL
+                            NavigationManager.NavigateTo(ResponseModel.urlRedirect);
+                        }
+                        else
+                        {
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    await JS.InvokeVoidAsync("console.log", $"Error 0: {e}");
+                }
+            }
+            catch (Exception e)
+            {
+                await JS.InvokeVoidAsync("console.log", $"Error 1: {e}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JS.InvokeVoidAsync("console.log", $"Error 2: {e}");
+        }
+
+        IsLoading = false;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+
+    public class Data
+    {
+        [JsonProperty("item")]
+        public string ItemName;
+
+        [JsonProperty("histories")]
+        public List<HistoryItem> Histories;
+
+        [JsonProperty("totalData")]
+        public int TotalData;
+
+        [JsonProperty("totalPages")]
+        public int TotalPages;
+    }
+}

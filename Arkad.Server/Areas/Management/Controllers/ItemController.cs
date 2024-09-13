@@ -1001,9 +1001,9 @@ namespace Arkad.Server.Areas.Management.Controllers
         #endregion Items
 
         #region Histories
-        [HttpGet("v1/historial")]
+        [HttpGet("v1/history")]
         [Produces("application/json")]
-        public async Task<ResponseGenericModel> FindHistorial()
+        public async Task<ResponseGenericModel> FindHistory()
         {
             ResponseGenericModel response = new ResponseGenericModel();
             var httpStatusCode = HttpStatusCode.OK;
