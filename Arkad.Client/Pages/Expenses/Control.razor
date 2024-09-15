@@ -330,7 +330,7 @@ else
     public ExpenseControl ExpenseControl { get; set; }
     public Role Role { get; set; }
 
-    public List<Item> ControlItems { get; set; }
+    public List<Item> ControlItems { get; set; } = new List<Item>();
 
     // Crear la lista de variables que se pasará a ValidateAndReplaceFormula
     List<FormulaVariable> ExpensesFormulaCalc { get; set; } = new List<FormulaVariable>();
@@ -635,6 +635,7 @@ else
         await GetContent();
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task Save()
