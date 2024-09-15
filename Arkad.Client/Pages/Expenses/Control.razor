@@ -70,6 +70,54 @@ else
                     <div class="col-sm-12">
                         <div class="text-end">
 
+                            <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#itemsModal">
+                                <i class="fa-solid fa-table"></i> Items
+                            </button>
+
+                            <div class="modal fade" id="itemsModal" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-xl modal-fullscreen-lg-down modal-dialog-scrollable">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="itemsModalLabel">
+                                                Items
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body text-black-50 text-start">
+                                            <div class="row">
+                                                <div class="col-sm-12 col-md-5 border border-dark p-2">
+                                                    <h4>Items Disponibles</h4>
+                                                    <Dropzone Items="Items" TItem="Item" InstantReplace="false" class="w-100 h-100">
+                                                        <ChildContent>
+                                                            <div class="sortable-item border border-primary p-2 mt-2">
+                                                                @($"{context.Name}")
+                                                            </div>
+                                                        </ChildContent>
+                                                    </Dropzone>
+                                                </div>
+
+                                                <div class="col-sm-0 col-md-2"></div>
+
+                                                <div class="col-sm-12 col-md-5 border border-dark p-2">
+                                                    <h4>Items Seleccionados</h4>
+                                                    <Dropzone Items="Expenses.Select(x => x.Item).ToList()" TItem="Item" InstantReplace="false" class="w-100 h-100">
+                                                        <ChildContent>
+                                                            <div class="sortable-item border border-success p-2 mt-2">
+                                                                @($"{context?.Name}")
+                                                            </div>
+                                                        </ChildContent>
+                                                    </Dropzone>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-success" form="itemsForm" type="submit">Agregar</button>
+                                            <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             @if (Role.Code.Equals("SYSADMIN", StringComparison.InvariantCultureIgnoreCase)
                                 || Role.Code.Equals("ADMIN", StringComparison.InvariantCultureIgnoreCase))
                             {
@@ -473,7 +521,7 @@ else
             }
             catch { }
 
-            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/expense/conrol/v1/get");
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/expense/control/v1/get");
 
             try
             {

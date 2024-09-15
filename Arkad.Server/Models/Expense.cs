@@ -17,6 +17,9 @@ namespace Arkad.Server.Models
         [Column("explanation")]
         public string Explanation { get; set; }
 
+        [Column("position")]
+        public int position { get; set; }
+
         [Required]
         [Column("created_date")]
         public DateTime CreatedDate { get; set; }

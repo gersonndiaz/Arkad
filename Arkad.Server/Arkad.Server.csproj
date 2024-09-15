@@ -35,6 +35,9 @@
     <Folder Include="Areas\Auth\Data\" />
     <Folder Include="Areas\Auth\Models\" />
     <Folder Include="Areas\Auth\Views\" />
+    <Folder Include="Areas\Expense\Data\" />
+    <Folder Include="Areas\Expense\Models\" />
+    <Folder Include="Areas\Expense\Views\" />
     <Folder Include="Areas\Management\Data\" />
     <Folder Include="Areas\Management\Models\" />
     <Folder Include="Areas\Management\Views\" />
