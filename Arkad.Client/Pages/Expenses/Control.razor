@@ -84,6 +84,17 @@ else
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body text-black-50 text-start">
+
+                                            <div class="row">
+                                                <hr />
+                                                <div class="col-12 text-center">
+                                                    <a href="/management/itemized" class="btn btn-primary mb-2">
+                                                        <i class="fa-solid fa-plus"></i> Nuevo Ítem
+                                                    </a>
+                                                </div>
+                                                <hr />
+                                            </div>
+
                                             <div class="row">
                                                 <div class="col-sm-12 col-md-5 border border-dark p-2">
                                                     <h4>Items Disponibles</h4>
@@ -96,22 +107,27 @@ else
                                                     </Dropzone>
                                                 </div>
 
-                                                <div class="col-sm-0 col-md-2"></div>
+                                                <div class="col-sm-2 col-md-2 h-100 align-middle d-sm-none d-md-block">
+                                                    <p class="text-center">@($">>")</p>
+                                                    <p class="text-center">@($"<<")</p>
+                                                </div>
 
                                                 <div class="col-sm-12 col-md-5 border border-dark p-2">
                                                     <h4>Items Seleccionados</h4>
-                                                    <Dropzone Items="Expenses.Select(x => x.Item).ToList()" TItem="Item" InstantReplace="false" class="w-100 h-100">
-                                                        <ChildContent>
-                                                            <div class="sortable-item border border-success p-2 mt-2">
-                                                                @($"{context?.Name}")
-                                                            </div>
-                                                        </ChildContent>
-                                                    </Dropzone>
+                                                    <form id="itemsForm" class="w-100 h-100" @onsubmit="() => UpdateItems()">
+                                                        <Dropzone Items="ControlItems" TItem="Item" InstantReplace="false" class="w-100 h-100">
+                                                            <ChildContent>
+                                                                <div class="sortable-item border border-success p-2 mt-2">
+                                                                    @($"{context?.Name}")
+                                                                </div>
+                                                            </ChildContent>
+                                                        </Dropzone>
+                                                    </form>
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
-                                            <button class="btn btn-success" form="itemsForm" type="submit">Agregar</button>
+                                            <button class="btn btn-success" form="itemsForm" type="submit">Actualizar</button>
                                             <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
                                         </div>
                                     </div>
@@ -313,6 +329,8 @@ else
     public List<Expense> Expenses { get; set; }
     public ExpenseControl ExpenseControl { get; set; }
     public Role Role { get; set; }
+
+    public List<Item> ControlItems { get; set; }
 
     // Crear la lista de variables que se pasará a ValidateAndReplaceFormula
     List<FormulaVariable> ExpensesFormulaCalc { get; set; } = new List<FormulaVariable>();
@@ -588,6 +606,35 @@ else
         IsLoading = false;
 
         StateHasChanged(); // Forzar renderizado
+    }
+
+    private async Task UpdateItems()
+    {
+        TitleLoading = "Actualizando información...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            string jExpenses = JsonConvert.SerializeObject(ControlItems);
+
+            Debug.WriteLine($"Response: {jExpenses}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {jExpenses}");
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+            Debug.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+            await JS.InvokeVoidAsync("alert", $"Error: {e.Message}");
+        }
+
+        Status = true;
+
+        await GetContent();
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
     }
 
     private async Task Save()

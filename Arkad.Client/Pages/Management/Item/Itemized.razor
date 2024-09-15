@@ -432,6 +432,7 @@ else
         if (firstRender)
         {
             await JS.InvokeVoidAsync("initializeSortable");
+            await JS.InvokeVoidAsync("closeAllModal");
 
             ItemNew.Auto = false;
             ItemNew.Monthly = false;
