@@ -649,6 +649,7 @@ else
         await GetItems(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task Update(Item item)
@@ -709,6 +710,7 @@ else
         await GetItems(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task UpdateStatus(Item item)
@@ -761,6 +763,7 @@ else
         await GetItems(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task Sort()
@@ -813,5 +816,6 @@ else
         await GetItems(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 }

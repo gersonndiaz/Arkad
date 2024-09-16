@@ -393,6 +393,7 @@
 
             await Task.Delay(1000);
             await ModalsComponent.ShowLoadingModal(false);
+            await JS.InvokeVoidAsync("closeAllModal");
         }
     }
 

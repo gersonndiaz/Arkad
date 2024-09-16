@@ -118,7 +118,7 @@ else
                                                         <Dropzone Items="ControlItems" TItem="Item" InstantReplace="false" class="w-100 h-100">
                                                             <ChildContent>
                                                                 <div class="sortable-item border border-success p-2 mt-2">
-                                                                    @($"{context?.Name}")
+                                                                    @($"{context.Name}")
                                                                 </div>
                                                             </ChildContent>
                                                         </Dropzone>
@@ -327,10 +327,10 @@ else
     public Period Period { get; set; }
     public List<Item> Items { get; set; }
     public List<Expense> Expenses { get; set; }
-    public ExpenseControl ExpenseControl { get; set; }
+    public ExpenseControl ExpenseControl { get; set; } = new ExpenseControl();
     public Role Role { get; set; }
 
-    public List<Item> ControlItems { get; set; } = new List<Item>();
+    public List<Item> ControlItems { get; set; }
 
     // Crear la lista de variables que se pasará a ValidateAndReplaceFormula
     List<FormulaVariable> ExpensesFormulaCalc { get; set; } = new List<FormulaVariable>();
@@ -565,11 +565,16 @@ else
                             {
                                 IsFinished = ExpenseControl.Finished;
                                 Expenses = JsonConvert.DeserializeObject<List<Expense>>(ExpenseControl.Data);
+
+                                foreach(var expense in Expenses)
+                                {
+                                    ControlItems.Add(expense.Item);
+                                }
                             }
                         }
                         catch (Exception e)
                         {
-                            //
+                        //
                         }
                     }
                     else
@@ -619,6 +624,36 @@ else
 
             Debug.WriteLine($"Response: {jExpenses}");
             await JS.InvokeVoidAsync("console.log", $"Response: {jExpenses}");
+
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("expenseControlId", ExpenseControl?.Id),
+                                    new KeyValuePair<string, string>("items", jExpenses)
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/expense/control/v1/update/items");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Debug.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+            }
         }
         catch (Exception e)
         {
@@ -691,6 +726,7 @@ else
         await GetContent();
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task Finish()
@@ -746,6 +782,7 @@ else
         await GetContent();
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task Open()
@@ -799,6 +836,7 @@ else
         await GetContent();
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
 

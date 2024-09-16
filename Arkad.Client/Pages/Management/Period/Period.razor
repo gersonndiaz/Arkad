@@ -491,6 +491,7 @@ else
         await GetPeriods(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task Update(Arkad.Shared.Models.Period period)
@@ -545,6 +546,7 @@ else
         await GetPeriods(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task UpdateStatus(Arkad.Shared.Models.Period period)
@@ -597,6 +599,7 @@ else
         await GetPeriods(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
     private async Task UpdateCurrent(Arkad.Shared.Models.Period period, string message)
@@ -650,6 +653,7 @@ else
         await GetPeriods(Status);
         await Task.Delay(1000);
         await ModalsComponent.ShowLoadingModal(false);
+        await JS.InvokeVoidAsync("closeAllModal");
     }
 
 

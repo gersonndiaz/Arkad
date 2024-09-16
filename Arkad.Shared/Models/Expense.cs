@@ -1,4 +1,6 @@
-﻿namespace Arkad.Shared.Models
+﻿using Newtonsoft.Json;
+
+namespace Arkad.Shared.Models
 {
     public class Expense
     {
@@ -22,6 +24,7 @@
 
         public string UserId { get; set; }
 
+        [JsonProperty("item")]
         public Item Item { get; set; }
     }
 }
