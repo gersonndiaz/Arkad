@@ -13,6 +13,7 @@ namespace Arkad.Server.DAO
         #region Control
         ExpenseControl GetControlById(string id);
         ExpenseControl GetControlByPeriod(Period period, bool? active);
+        bool UpdateControl(ExpenseControl control, History history, HistoryExpenseControl historyControl);
         bool UpdateControl(List<Expense> expenses, ExpenseControl control, History history, HistoryExpenseControl historyControl);
         #endregion Control
     }

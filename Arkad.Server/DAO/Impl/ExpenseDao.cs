@@ -183,6 +183,74 @@ namespace Arkad.Server.DAO.Impl
         /// <summary>
         /// Se actualiza la información del control de gastos
         /// </summary>
+        /// <param name="control"></param>
+        /// <param name="history"></param>
+        /// <param name="historyControl"></param>
+        /// <returns></returns>
+        public bool UpdateControl(ExpenseControl control, History history, HistoryExpenseControl historyControl)
+        {
+            bool success = false;
+
+            try
+            {
+                #region TRANSACCION
+                using (var dbContextTransaction = appDbContext.Database.BeginTransaction())
+                {
+                    try
+                    {
+                        #region Expense Control
+                        appDbContext.ExpensesControl.Attach(control);
+                        appDbContext.Entry(control).State = EntityState.Modified;
+                        success = (appDbContext.SaveChanges() > 0) ? true : false;
+                        #endregion Expense Control
+
+                        #region History
+                        if (success)
+                        {
+                            appDbContext.Histories.Attach(history);
+                            appDbContext.Entry(history).State = EntityState.Added;
+                            success = (appDbContext.SaveChanges() > 0) ? true : false;
+
+                            if (success)
+                            {
+                                appDbContext.HistoryExpensesControl.Attach(historyControl);
+                                appDbContext.Entry(historyControl).State = EntityState.Added;
+                                success = (appDbContext.SaveChanges() > 0) ? true : false;
+                            }
+                        }
+                        #endregion History
+                    }
+                    catch (Exception e)
+                    {
+                        success = false;
+                        logger.Error($"{TAG} -- {e}");
+                    }
+
+                    #region COMMIT OR ROLLBACK TRANSACTION
+                    if (success)
+                    {
+                        dbContextTransaction.Commit();
+                    }
+                    else
+                    {
+                        dbContextTransaction.Rollback();
+                    }
+                    #endregion
+                }
+                #endregion TRANSACCION
+            }
+            catch (Exception e)
+            {
+                success = false;
+                logger.Error($"{TAG} -- {e}");
+            }
+
+            return success;
+        }
+
+        /// <summary>
+        /// Se actualiza la información del control de gastos
+        /// </summary>
         /// <param name="expenses"></param>
         /// <param name="control"></param>
         /// <param name="history"></param>

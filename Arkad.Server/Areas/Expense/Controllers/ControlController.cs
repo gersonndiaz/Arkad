@@ -165,6 +165,227 @@ namespace Arkad.Server.Areas.Expense.Controllers
             return response;
         }
 
+        [HttpPost("v1/save")]
+        [Produces("application/json")]
+        public async Task<ResponseGenericModel> Save()
+        {
+            ResponseGenericModel response = new ResponseGenericModel();
+            var httpStatusCode = HttpStatusCode.OK;
+
+            try
+            {
+                #region Referer
+                string referer = Request.Headers["Referer"].ToString();
+                #endregion Referer
+
+                string Authorization = Request.Headers[TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION].ToString();
+
+                string expenseControlId = Request.Form["expenseControlId"];
+                string sExpenses = Request.Form["expenses"];
+
+                if (String.IsNullOrEmpty(Authorization))
+                {
+                    httpStatusCode = HttpStatusCode.Unauthorized;
+                    response.status = StatusResponseCodes.StatusResponseError;
+                    response.subject = "Acceso no autorizado!";
+                    response.message = "Usuario y/o contraseña incorrecta!";
+                    response.httpCode = (int)httpStatusCode;
+                    response.urlRedirect = $"/error?code=403&message={HttpUtility.UrlEncode("Acceso no autorizado!")}&returnUrl={referer}";
+                }
+                else if (!String.IsNullOrEmpty(expenseControlId)
+                        && !DataTypeValidation.checkGuid(expenseControlId))
+                {
+                    httpStatusCode = HttpStatusCode.BadRequest;
+                    response.status = StatusResponseCodes.StatusResponseError;
+                    response.subject = "Error control";
+                    response.message = "El Control seleccionado no es válido!";
+                    response.httpCode = (int)httpStatusCode;
+                }
+                else if (String.IsNullOrEmpty(sExpenses))
+                {
+                    httpStatusCode = HttpStatusCode.BadRequest;
+                    response.status = StatusResponseCodes.StatusResponseError;
+                    response.subject = "Error gastos";
+                    response.message = "Los indicadores de gastos son obligatorios!";
+                    response.httpCode = (int)httpStatusCode;
+                }
+                else
+                {
+                    string userId = SecurityUtils.GetValByTypeFromToken(Authorization, clientSecret, TagUtil.TAG_JWT_CLAIM_USUARIO_ID);
+
+                    #region DAO
+                    ExpenseDao expenseDao = new ExpenseDao();
+                    ItemDao itemDao = new ItemDao();
+                    PeriodDao periodDao = new PeriodDao();
+                    UserDao userDao = new UserDao();
+                    #endregion DAO
+
+                    #region DTO
+                    User user = userDao.GetById(userId);
+                    var jExpenses = JsonConvert.DeserializeObject<List<Shared.Models.Expense>>(sExpenses);
+                    var role = (user is not null) ? userDao.GetRoleById(user.RoleId) : null;
+                    var periodCurrent = periodDao.GetCurrent();
+
+                    var expenseControl = (!String.IsNullOrEmpty(expenseControlId)
+                                        && DataTypeValidation.checkGuid(expenseControlId))
+                                                ? expenseDao.GetControlById(expenseControlId)
+                                                : null;
+                    var expenseControlPeriod = (periodCurrent is not null)
+                                                    ? expenseDao.GetControlByPeriod(periodCurrent, true)
+                                                    : null;
+                    #endregion DTO
+
+                    bool expenseControlValid = true;
+                    if (expenseControl is not null && expenseControlPeriod is not null)
+                    {
+                        expenseControlValid = (expenseControl.Id == expenseControlPeriod.Id);
+                    }
+                    else if (expenseControl is not null && expenseControlPeriod is null)
+                    {
+                        expenseControlValid = false;
+                    }
+                    else if (expenseControl is null && expenseControlPeriod is not null)
+                    {
+                        expenseControlValid = false;
+                    }
+
+                    if (user is null || !user.Active)
+                    {
+                        httpStatusCode = HttpStatusCode.Unauthorized;
+                        response.status = StatusResponseCodes.StatusResponseError;
+                        response.subject = "Acceso no autorizado!";
+                        response.message = $"Su usuario no se encuentra autorizado!";
+                        response.httpCode = (int)httpStatusCode;
+                    }
+                    else if (role is null)
+                    {
+                        httpStatusCode = HttpStatusCode.Unauthorized;
+                        response.status = StatusResponseCodes.StatusResponseError;
+                        response.subject = "Error rol";
+                        response.message = "El rol de usuario no ha sido encontrado!";
+                        response.httpCode = (int)httpStatusCode;
+                    }
+                    //else if (rol.Codigo != "SYSADMIN" && rol.Codigo != "ADMIN")
+                    //{
+                    //    httpStatusCode = HttpStatusCode.Unauthorized;
+                    //    response.status = StatusResponseCodes.StatusResponseError;
+                    //    response.subject = "Error usuario";
+                    //    response.message = "Su usuario no está autorizado para acceder a esta información!";
+                    //    response.httpCode = (int)httpStatusCode;
+                    //}
+                    else if (jExpenses is null)
+                    {
+                        httpStatusCode = HttpStatusCode.OK;
+                        response.status = StatusResponseCodes.StatusResponseError;
+                        response.subject = "Error";
+                        response.message = $"Los indicadores de gastos no son válidos!";
+                        response.httpCode = (int)httpStatusCode;
+                    }
+                    else if (periodCurrent is null)
+                    {
+                        httpStatusCode = HttpStatusCode.OK;
+                        response.status = StatusResponseCodes.StatusResponseError;
+                        response.subject = "Error";
+                        response.message = $"El periodo seleccionado no es válido!";
+                        response.httpCode = (int)httpStatusCode;
+                    }
+                    else if (!expenseControlValid)
+                    {
+                        httpStatusCode = HttpStatusCode.OK;
+                        response.status = StatusResponseCodes.StatusResponseError;
+                        response.subject = "Error";
+                        response.message = $"El control de gastos no es válido!";
+                        response.httpCode = (int)httpStatusCode;
+                    }
+                    else if (expenseControl is null)
+                    {
+                        httpStatusCode = HttpStatusCode.OK;
+                        response.status = StatusResponseCodes.StatusResponseError;
+                        response.subject = "Error";
+                        response.message = $"El control de gastos no existe!";
+                        response.httpCode = (int)httpStatusCode;
+                    }
+                    else
+                    {
+                        List<Shared.Models.Expense> ExpensesAux = JsonConvert.DeserializeObject<List<Shared.Models.Expense>>(expenseControl.Data);
+
+                        if (jExpenses is not null && jExpenses.Count > 0)
+                        {
+                            foreach(var mExpense in jExpenses)
+                            {
+                                var vExpense = ExpensesAux.FirstOrDefault(x => x.Id == mExpense.Id);
+                                vExpense.Value = mExpense.Value;
+                                vExpense.Explanation = mExpense.Explanation;
+                                vExpense.ModifiedDate = DateTime.Now;
+
+                                var expense = expenseDao.GetById(vExpense.Id);
+                                expense.Value = mExpense.Value;
+                                expense.Explanation = mExpense.Explanation;
+                                expense.ModifiedDate = DateTime.Now;
+                            }
+                        }
+
+                        expenseControl.Data = JsonConvert.SerializeObject(ExpensesAux);
+                        expenseControl.ModifiedDate = DateTime.Now;
+
+                        History historyControl = new()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Explanation = $"[{TagUtil.TAG_HISTORIAL_MODIFICAR}]",
+                            Description = $"Se ha registrado nueva información",
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true
+                        };
+
+                        HistoryExpenseControl historyExpenseControl = new()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Data = JsonConvert.SerializeObject(expenseControl),
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true,
+                            HistoryId = historyControl.Id,
+                            ExpenseControlId = expenseControl.Id,
+                            UserId = user.Id
+                        };
+
+                        bool success = expenseDao.UpdateControl(expenseControl, historyControl, historyExpenseControl);
+
+                        if (success)
+                        {
+                            httpStatusCode = HttpStatusCode.OK;
+                            response.status = StatusResponseCodes.StatusResponseSuccess;
+                            response.subject = "Éxito";
+                            response.message = "Indicadores registrados con éxito!";
+                            response.httpCode = (int)httpStatusCode;
+                        }
+                        else
+                        {
+                            httpStatusCode = HttpStatusCode.OK;
+                            response.status = StatusResponseCodes.StatusResponseError;
+                            response.subject = "Error";
+                            response.message = "No fue posible registrar los indicadores. Por favor intentelo nuevamente.";
+                            response.httpCode = (int)httpStatusCode;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                httpStatusCode = HttpStatusCode.InternalServerError;
+                response.status = StatusResponseCodes.StatusResponseError;
+                response.subject = "No fue posible procesar la solicitud.";
+                response.message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+                response.httpCode = (int)httpStatusCode;
+
+                logger.Error(TAG + " -- " + e);
+            }
+
+            this.HttpContext.Response.StatusCode = httpStatusCode.GetHashCode();
+            return response;
+        }
+
         [HttpPost("v1/update/items")]
         [Produces("application/json")]
         public async Task<ResponseGenericModel> UpdateItems()

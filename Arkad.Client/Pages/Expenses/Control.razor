@@ -260,13 +260,16 @@ else
                         {
                             @foreach (var expense in Expenses)
                             {
-                                Console.WriteLine($"Expense: {JsonConvert.SerializeObject(expense)}");
+                                //Console.WriteLine($"Expense: {JsonConvert.SerializeObject(expense)}");
 
                                 <div class="row">
                                     <div class="col-sm-12 col-md-6">
                                         <label class="form-label">@expense.Item.Name</label>
                                     </div>
-                                    <div class="col-sm-12 col-md-6">
+                                    <div class="col-sm-12 col-md-3">
+                                        <InputTextArea name="descripcion" class="form-control" @bind-Value="expense.Explanation" />
+                                    </div>
+                                    <div class="col-sm-12 col-md-3">
                                         @if (IsFinished)
                                         {
                                             <input type="number" class="form-control" step=".001"
@@ -359,11 +362,11 @@ else
             {
                 foreach (var expense in Expenses)
                 {
-                    var existingVariable = ExpensesFormulaCalc.FirstOrDefault(x => x.Id == expense.Id);
+                    var existingVariable = ExpensesFormulaCalc.FirstOrDefault(x => x.Id == expense.ItemId);
 
                     if (existingVariable is null)
                     {
-                        ExpensesFormulaCalc.Add(new FormulaVariable { Id = expense.Id, Value = expense.Value });
+                        ExpensesFormulaCalc.Add(new FormulaVariable { Id = expense.ItemId, Value = expense.Value });
                     }
                 }
             }
@@ -415,26 +418,26 @@ else
             {
                 foreach (var mExpense in Expenses)
                 {
-                    if (mExpense.Item.Formula.Contains(expense.Id, StringComparison.InvariantCultureIgnoreCase))
+                    if (mExpense.Item.Formula.Contains(expense.ItemId, StringComparison.InvariantCultureIgnoreCase))
                     {
                         Console.WriteLine($"[OnInputChange]: Item '{mExpense.Item.Name}' encontrado con la formula {mExpense.Item.FormulaAux}");
 
                         try
                         {
                             // Verificar si el ID ya existe en la lista
-                            var existingVariable = ExpensesFormulaCalc.FirstOrDefault(x => x.Id == expense.Id);
+                            var existingVariable = ExpensesFormulaCalc.FirstOrDefault(x => x.Id == expense.ItemId);
 
                             if (existingVariable != null)
                             {
                                 // Si el ID ya existe, actualiza el valor
                                 existingVariable.Value = nValue;
-                                Console.WriteLine($"[OnInputChange]: Actualizado ID '{expense.Id}' con nuevo valor: {nValue}");
+                                Console.WriteLine($"[OnInputChange]: Actualizado ID '{expense.ItemId}' con nuevo valor: {nValue}");
                             }
                             else
                             {
                                 // Si el ID no existe, agrégalo a la lista
-                                ExpensesFormulaCalc.Add(new FormulaVariable { Id = expense.Id, Value = nValue });
-                                Console.WriteLine($"[OnInputChange]: Agregado ID '{expense.Id}' con valor: {nValue}");
+                                ExpensesFormulaCalc.Add(new FormulaVariable { Id = expense.ItemId, Value = nValue });
+                                Console.WriteLine($"[OnInputChange]: Agregado ID '{expense.ItemId}' con valor: {nValue}");
                             }
 
                             // Verificar el contenido de la lista después de la actualización
@@ -450,7 +453,7 @@ else
                             mExpense.Value = resultado;
 
                             // Llamada recursiva para manejar cualquier cadena de dependencias
-                            await RecalcularDependencias(expense.Id, resultado);
+                            await RecalcularDependencias(expense.ItemId, resultado);
                         }
                         catch (Exception e)
                         {
@@ -513,7 +516,7 @@ else
                         expense.Value = resultado;
 
                         // Llamada recursiva para manejar cualquier cadena de dependencias
-                        await RecalcularDependencias(expense.Id, resultado);
+                        await RecalcularDependencias(expense.ItemId, resultado);
                     }
                     catch (Exception e)
                     {
@@ -695,11 +698,12 @@ else
 
             var formData = new List<KeyValuePair<string, string>>
                                 {
+                                    new KeyValuePair<string, string>("expenseControlId", ExpenseControl?.Id),
                                     new KeyValuePair<string, string>("expenses", jExpenses)
                                 };
             var content = new FormUrlEncodedContent(formData);
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/indicators/accident/v1/save");
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/expense/control/v1/save");
             request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
             request.Content = content;
 
