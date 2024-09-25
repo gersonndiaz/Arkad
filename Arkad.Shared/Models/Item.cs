@@ -1,4 +1,6 @@
-﻿namespace Arkad.Shared.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Arkad.Shared.Models
 {
     public class Item
     {
@@ -29,6 +31,10 @@
         public bool Active { get; set; }
 
         public string GroupId { get; set; }
+
+        #region VIRTUAL
+        public Group Group { get; set; }
+        #endregion VIRTUAL
     }
 
     public enum TypeEnum

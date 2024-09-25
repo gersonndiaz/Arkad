@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Arkad.Shared.Models
 {
@@ -24,7 +25,10 @@ namespace Arkad.Shared.Models
 
         public string UserId { get; set; }
 
-        [JsonProperty("item")]
         public Item Item { get; set; }
+
+        public Period Period { get; set; }
+
+        public User User { get; set; }
     }
 }

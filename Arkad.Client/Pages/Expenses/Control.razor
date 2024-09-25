@@ -260,6 +260,8 @@ else
                         {
                             @foreach (var expense in Expenses)
                             {
+                                Console.WriteLine($"Expense: {JsonConvert.SerializeObject(expense)}");
+
                                 <div class="row">
                                     <div class="col-sm-12 col-md-6">
                                         <label class="form-label">@expense.Item.Name</label>
@@ -330,7 +332,7 @@ else
     public ExpenseControl ExpenseControl { get; set; } = new ExpenseControl();
     public Role Role { get; set; }
 
-    public List<Item> ControlItems { get; set; }
+    public List<Item> ControlItems { get; set; } = new List<Item>();
 
     // Crear la lista de variables que se pasará a ValidateAndReplaceFormula
     List<FormulaVariable> ExpensesFormulaCalc { get; set; } = new List<FormulaVariable>();
@@ -566,9 +568,18 @@ else
                                 IsFinished = ExpenseControl.Finished;
                                 Expenses = JsonConvert.DeserializeObject<List<Expense>>(ExpenseControl.Data);
 
+                                ControlItems = new List<Item>();
                                 foreach(var expense in Expenses)
                                 {
                                     ControlItems.Add(expense.Item);
+
+                                    var mExpense = Expenses.FirstOrDefault(x => x.Id == expense.Id);
+
+                                    if (mExpense is not null)
+                                    {
+                                        var mItem = Items.FirstOrDefault(x => x.Id == mExpense.ItemId);
+                                        Items.Remove(mItem);
+                                    }
                                 }
                             }
                         }
@@ -847,7 +858,7 @@ else
 
         [JsonProperty("items")]
         public List<Item> Items;
-
+        
         [JsonProperty("expenses")]
         public List<Expense> Expenses;
 

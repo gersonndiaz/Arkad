@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NLog;
 using System.Net;
-using System.Runtime.Intrinsics.X86;
 using System.Web;
 
 namespace Arkad.Server.Areas.Expense.Controllers
@@ -103,6 +102,36 @@ namespace Arkad.Server.Areas.Expense.Controllers
                     #endregion VALIDACION
                     else
                     {
+                        //var vPeriod = (period is not null) ? period.Adapt<Shared.Models.Period>() : null;
+                        //var vItems = (items is not null) ? items.Adapt<List<Shared.Models.Item>>() : null;
+                        //var vExpenses = (expenses is not null) ? expenses.Adapt<List<Shared.Models.Expense>>() : null;
+                        //var vControl = (control is not null) ? control.Adapt<Shared.Models.ExpenseControl>() : null;
+                        //var vRole = (role is not null) ? role.Adapt<Shared.Models.Role>() : null;
+
+                        //object data = new
+                        //{
+                        //    period = vPeriod,
+                        //    items = vItems,
+                        //    expenses = vExpenses,
+                        //    control = vControl,
+                        //    role = vRole
+                        //};
+
+                        if (expenses is not null)
+                        {
+                            foreach(var expense in expenses)
+                            {
+                                expense.User = null;
+                                expense.UserId = null;
+                            }
+                        }
+
+                        if (control is not null)
+                        {
+                            control.User = null;
+                            control.UserId = null;
+                        }
+
                         object data = new
                         {
                             period = period,
@@ -202,7 +231,7 @@ namespace Arkad.Server.Areas.Expense.Controllers
                                         : null;
 
                     var expenseControl = (!String.IsNullOrEmpty(expenseControlId)
-                                        && !DataTypeValidation.checkGuid(expenseControlId))
+                                        && DataTypeValidation.checkGuid(expenseControlId))
                                                 ? expenseDao.GetControlById(expenseControlId)
                                                 : null;
                     var expenseControlPeriod = (periodCurrent is not null)
@@ -275,6 +304,7 @@ namespace Arkad.Server.Areas.Expense.Controllers
                     else
                     {
                         List<Models.Expense> ExpensesNew = new List<Models.Expense>();
+                        List<Shared.Models.Expense> ExpensesNewAux = new List<Shared.Models.Expense>();
                         List<FormulaVariable> ItemsFormulaCalc = new List<FormulaVariable>();
 
                         if (expenses is not null && expenses.Count > 0)
@@ -312,7 +342,28 @@ namespace Arkad.Server.Areas.Expense.Controllers
                                     expense.PeriodId = periodCurrent.Id;
                                     expense.UserId = user.Id;
 
+
+                                    string jItem = JsonConvert.SerializeObject(mItem);
+                                    string jPeriod = JsonConvert.SerializeObject(periodCurrent);
+                                    string jUser = JsonConvert.SerializeObject(user);
+
+                                    var vItem = JsonConvert.DeserializeObject<Shared.Models.Item>(jItem);
+                                    var vPeriod = JsonConvert.DeserializeObject<Shared.Models.Period>(jPeriod);
+                                    var vUser = JsonConvert.DeserializeObject<Shared.Models.User>(jUser);
+                                    vUser.Password = null;
+
+                                    var mExpense = expense.Adapt<Shared.Models.Expense>();
+                                    mExpense.Item = vItem;
+                                    mExpense.Period = vPeriod;
+                                    mExpense.User = vUser;
+
                                     ExpensesNew.Add(expense);
+                                    ExpensesNewAux.Add(mExpense);
+                                }
+                                else
+                                {
+                                    var mExpense = expense.Adapt<Shared.Models.Expense>();
+                                    ExpensesNewAux.Add(mExpense);
                                 }
                             }
                         }
@@ -337,7 +388,7 @@ namespace Arkad.Server.Areas.Expense.Controllers
                         {
                             expenseControl = new ExpenseControl();
                             expenseControl.Id = Guid.NewGuid().ToString();
-                            expenseControl.Data = JsonConvert.SerializeObject(ExpensesNew);
+                            expenseControl.Data = JsonConvert.SerializeObject(ExpensesNewAux);
                             expenseControl.Explanation = $"Control de Gastos [{periodCurrent.Year}/{periodCurrent.Month.ToString("D2")}]";
                             expenseControl.Finished = false;
                             expenseControl.CreatedDate = DateTime.Now;
@@ -350,7 +401,7 @@ namespace Arkad.Server.Areas.Expense.Controllers
                         }
                         else
                         {
-                            expenseControl.Data = JsonConvert.SerializeObject(ExpensesNew);
+                            expenseControl.Data = JsonConvert.SerializeObject(ExpensesNewAux);
                             expenseControl.ModifiedDate = DateTime.Now;
 
                             newHistory = false;
