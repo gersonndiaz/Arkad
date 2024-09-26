@@ -265,8 +265,16 @@ else
                             {
                                 //Console.WriteLine($"Expense: {JsonConvert.SerializeObject(expense)}");
 
+                                string expenseDescription = (!String.IsNullOrEmpty(expense.Item.Description)) ? expense.Item.Description : "Sin descripción";
+
                                 <div class="row">
                                     <div class="col-sm-12 col-md-6">
+                                        @* <button type="button" class="btn btn-secondary" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Tooltip on right">
+                                            Tooltip on right
+                                        </button> *@
+                                        <button type="button" class="btn btn-outline-info" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="right" data-bs-content="@expenseDescription">
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </button>
                                         <label class="form-label">@expense.Item.Name</label>
                                     </div>
                                     <div class="col-sm-12 col-md-3">
@@ -372,6 +380,28 @@ else
                         ExpensesFormulaCalc.Add(new FormulaVariable { Id = expense.ItemId, Value = expense.Value });
                     }
                 }
+            }
+
+            try
+            {
+                // Llama a la función JavaScript para inicializar los popovers
+                await JS.InvokeVoidAsync("bootstrapHelpers.initializePopovers");
+                Console.WriteLine("Popovers initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing popovers: {ex.Message}");
+            }
+
+            try
+            {
+                // Llama a la función JavaScript para inicializar los tooltips
+                await JS.InvokeVoidAsync("bootstrapHelpers.initializeTooltips");
+                Console.WriteLine("Tooltips initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing tooltips: {ex.Message}");
             }
 
             StateHasChanged(); // Forzar renderizado
