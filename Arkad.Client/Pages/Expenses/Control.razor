@@ -70,69 +70,72 @@ else
                     <div class="col-sm-12">
                         <div class="text-end">
 
-                            <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#itemsModal">
-                                <i class="fa-solid fa-table"></i> Items
-                            </button>
+                            @if (ExpenseControl is not null && !ExpenseControl.Finished)
+                            {
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#itemsModal">
+                                    <i class="fa-solid fa-table"></i> Items
+                                </button>
 
-                            <div class="modal fade" id="itemsModal" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-                                <div class="modal-dialog modal-xl modal-fullscreen-lg-down modal-dialog-scrollable">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="itemsModalLabel">
-                                                Items
-                                            </h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body text-black-50 text-start">
-
-                                            <div class="row">
-                                                <hr />
-                                                <div class="col-12 text-center">
-                                                    <a href="/management/itemized" class="btn btn-primary mb-2">
-                                                        <i class="fa-solid fa-plus"></i> Nuevo Ítem
-                                                    </a>
-                                                </div>
-                                                <hr />
+                                <div class="modal fade" id="itemsModal" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-xl modal-fullscreen-lg-down modal-dialog-scrollable">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="itemsModalLabel">
+                                                    Items
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
+                                            <div class="modal-body text-black-50 text-start">
 
-                                            <div class="row">
-                                                <div class="col-sm-12 col-md-5 border border-dark p-2">
-                                                    <h4>Items Disponibles</h4>
-                                                    <Dropzone Items="Items" TItem="Item" InstantReplace="false" class="w-100 h-100">
-                                                        <ChildContent>
-                                                            <div class="sortable-item border border-primary p-2 mt-2">
-                                                                @($"{context.Name}")
-                                                            </div>
-                                                        </ChildContent>
-                                                    </Dropzone>
+                                                <div class="row">
+                                                    <hr />
+                                                    <div class="col-12 text-center">
+                                                        <a href="/management/itemized" class="btn btn-primary mb-2">
+                                                            <i class="fa-solid fa-plus"></i> Nuevo Ítem
+                                                        </a>
+                                                    </div>
+                                                    <hr />
                                                 </div>
 
-                                                <div class="col-sm-2 col-md-2 h-100 align-middle d-sm-none d-md-block">
-                                                    <p class="text-center">@($">>")</p>
-                                                    <p class="text-center">@($"<<")</p>
-                                                </div>
-
-                                                <div class="col-sm-12 col-md-5 border border-dark p-2">
-                                                    <h4>Items Seleccionados</h4>
-                                                    <form id="itemsForm" class="w-100 h-100" @onsubmit="() => UpdateItems()">
-                                                        <Dropzone Items="ControlItems" TItem="Item" InstantReplace="false" class="w-100 h-100">
+                                                <div class="row">
+                                                    <div class="col-sm-12 col-md-5 border border-dark p-2">
+                                                        <h4>Items Disponibles</h4>
+                                                        <Dropzone Items="Items" TItem="Item" InstantReplace="false" class="w-100 h-100">
                                                             <ChildContent>
-                                                                <div class="sortable-item border border-success p-2 mt-2">
+                                                                <div class="sortable-item border border-primary p-2 mt-2">
                                                                     @($"{context.Name}")
                                                                 </div>
                                                             </ChildContent>
                                                         </Dropzone>
-                                                    </form>
+                                                    </div>
+
+                                                    <div class="col-sm-2 col-md-2 h-100 align-middle d-sm-none d-md-block">
+                                                        <p class="text-center">@($">>")</p>
+                                                        <p class="text-center">@($"<<")</p>
+                                                    </div>
+
+                                                    <div class="col-sm-12 col-md-5 border border-dark p-2">
+                                                        <h4>Items Seleccionados</h4>
+                                                        <form id="itemsForm" class="w-100 h-100" @onsubmit="() => UpdateItems()">
+                                                            <Dropzone Items="ControlItems" TItem="Item" InstantReplace="false" class="w-100 h-100">
+                                                                <ChildContent>
+                                                                    <div class="sortable-item border border-success p-2 mt-2">
+                                                                        @($"{context.Name}")
+                                                                    </div>
+                                                                </ChildContent>
+                                                            </Dropzone>
+                                                        </form>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button class="btn btn-success" form="itemsForm" type="submit">Actualizar</button>
-                                            <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                            <div class="modal-footer">
+                                                <button class="btn btn-success" form="itemsForm" type="submit">Actualizar</button>
+                                                <button class="btn btn-secondary" type="button" data-bs-dismiss="modal" aria-label="Close">Cancelar</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            }
 
                             @if (Role.Code.Equals("SYSADMIN", StringComparison.InvariantCultureIgnoreCase)
                                 || Role.Code.Equals("ADMIN", StringComparison.InvariantCultureIgnoreCase))
@@ -148,14 +151,14 @@ else
                                             <div class="modal-content">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title" id="openModalLabel">
-                                                        Reabrir periodo
+                                                        Reabrir control de gastos
                                                     </h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                 </div>
                                                 <div class="modal-body text-black-50 text-start">
                                                     <div class="row">
                                                         <div class="col-sm-12 text-center">
-                                                            ¿Esta seguro que desea reabrir el periodo?
+                                                            ¿Esta seguro que desea reabrir el control de gastos?
                                                         </div>
                                                         <EditForm id="formOpen" Model="ExpenseControl" OnValidSubmit="Open"></EditForm>
                                                     </div>
@@ -179,14 +182,14 @@ else
                                             <div class="modal-content">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title" id="finishModalLabel">
-                                                        Cerrar periodo
+                                                        Cerrar control de gastos
                                                     </h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                 </div>
                                                 <div class="modal-body text-black-50 text-start">
                                                     <div class="row">
                                                         <div class="col-sm-12 text-center">
-                                                            ¿Esta seguro que desea finalizar y cerrar el periodo con la información ingresada?
+                                                            ¿Esta seguro que desea finalizar el control de gastos con la información ingresada?
                                                         </div>
                                                         <EditForm id="formFinish" Model="Expenses" OnValidSubmit="Finish"></EditForm>
                                                     </div>
@@ -267,7 +270,7 @@ else
                                         <label class="form-label">@expense.Item.Name</label>
                                     </div>
                                     <div class="col-sm-12 col-md-3">
-                                        <InputTextArea name="descripcion" class="form-control" @bind-Value="expense.Explanation" />
+                                        <InputTextArea name="descripcion" class="form-control" @bind-Value="expense.Explanation" disabled="@((IsFinished))" />
                                     </div>
                                     <div class="col-sm-12 col-md-3">
                                         @if (IsFinished)
@@ -746,7 +749,7 @@ else
 
     private async Task Finish()
     {
-        TitleLoading = "Finalizando y cerrando periodo...";
+        TitleLoading = "Finalizando control de gastos...";
         await ModalsComponent.ShowLoadingModal(true);
 
         try
@@ -755,11 +758,11 @@ else
 
             var formData = new List<KeyValuePair<string, string>>
                                 {
-                                    new KeyValuePair<string, string>("expenses", jExpenses)
+                                    new KeyValuePair<string, string>("expenseControlId", ExpenseControl?.Id)
                                 };
             var content = new FormUrlEncodedContent(formData);
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/indicators/accident/v1/finish");
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/expense/control/v1/finish");
             request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
             request.Content = content;
 
@@ -802,18 +805,18 @@ else
 
     private async Task Open()
     {
-        TitleLoading = "Abriendo periodo...";
+        TitleLoading = "Abriendo control de gastos...";
         await ModalsComponent.ShowLoadingModal(true);
 
         try
         {
             var formData = new List<KeyValuePair<string, string>>
                                 {
-                                    new KeyValuePair<string, string>("expenseControlId", ExpenseControl.Id)
+                                    new KeyValuePair<string, string>("expenseControlId", ExpenseControl?.Id)
                                 };
             var content = new FormUrlEncodedContent(formData);
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/indicators/accident/v1/open");
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/expense/control/v1/open");
             request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
             request.Content = content;
 
