@@ -1,0 +1,52 @@
+﻿@layout MainLayout
+@page "/reports/control"
+@using Arkad.Client.Shared.Components
+@using Arkad.Shared
+@using Arkad.Shared.Models
+@using Arkad.Shared.Utils.Formula
+@using Hefesto.Response
+@using Microsoft.AspNetCore.Components.Forms
+@using Newtonsoft.Json
+@using System.Diagnostics
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<h3>Control</h3>
+
+@code {
+    [SupplyParameterFromQuery(Name = "page")]
+    public int Page { get; set; } = 1;
+
+    [SupplyParameterFromQuery(Name = "seach")]
+    private string Search { get; set; }
+
+    [SupplyParameterFromQuery(Name = "month")]
+    private int? Month { get; set; }
+
+    [SupplyParameterFromQuery(Name = "year")]
+    private int? Year { get; set; }
+
+    private int TotalPage { get; set; } = 0;
+
+    public bool Status { get; set; } = true;
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    public string Authorization { get; set; }
+    public bool IsLoading { get; set; } = true;
+
+    private ResponseGenericModel ResponseModel { get; set; }
+}

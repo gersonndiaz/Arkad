@@ -460,7 +460,7 @@ else
                             // Verificar si el ID ya existe en la lista
                             var existingVariable = ExpensesFormulaCalc.FirstOrDefault(x => x.Id == expense.ItemId);
 
-                            if (existingVariable != null)
+                            if (existingVariable is not null)
                             {
                                 // Si el ID ya existe, actualiza el valor
                                 existingVariable.Value = nValue;
@@ -480,17 +480,17 @@ else
                             }
 
                             // Llamar a la función de validación y cálculo
-                            float resultado = FormulaUtil.ValidateAndReplaceFormula(expense.Item.Formula, ExpensesFormulaCalc);
+                            float resultado = FormulaUtil.ValidateAndReplaceFormula(mExpense.Item.Formula, ExpensesFormulaCalc);
                             Console.WriteLine($"[OnInputChange]: Resultado de la fórmula calculada: {resultado}");
 
                             mExpense.Value = resultado;
 
                             // Llamada recursiva para manejar cualquier cadena de dependencias
-                            await RecalcularDependencias(expense.ItemId, resultado);
+                            await RecalcularDependencias(mExpense.ItemId, resultado);
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine($"[OnInputChange]: {e.Message}");
+                            Console.WriteLine($"[OnInputChange][Exception]: {e.Message}");
                         }
                     }
                 }
