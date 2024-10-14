@@ -17,4 +17,4 @@ Arkad es un proyecto creado con Blazor Webassembly sobre .NET 8 y SQLite, con la
 
 ## Licencia 📄
 
-Este proyecto está bajo la Licencia GPLv3 - mira el archivo [LICENSE.md](LICENSE.md) para detalles
+Este proyecto está bajo la Licencia GPLv3 - mira el archivo [LICENSE.md](License.md) para detalles
