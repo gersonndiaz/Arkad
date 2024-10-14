@@ -10,9 +10,9 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Resumen de Gastos</h1>
 
-Welcome to your new app.
+<hr />
 
 @if (IsLoading)
 {
@@ -28,12 +28,63 @@ Welcome to your new app.
 else
 {
     <div class="row">
+        <div class="co-12">
+
+            <!--#region Filtros-->
+            <div class="card">
+                <div class="card-body">
+                    <div class="col-sm-12">
+                        <div class="text-center">
+                            <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offCanvasUltimosMeses" aria-controls="offCanvasUltimosMeses">
+                                Meses
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="offcanvas offcanvas-top" tabindex="-1" id="offCanvasUltimosMeses" data-bs-backdrop="static" aria-labelledby="offCanvasUltimosMesesLabel">
+                <div class="offcanvas-header">
+                    <h5 class="offcanvas-title" id="offCanvasUltimosMesesLabel">Últimos meses</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body">
+                    <div class="row">
+                        <div class="col-12 text-center">
+                            <select class="form-select" @onchange="(e) => OnSelectMonthsChange(e)">
+                                <option value="1" selected="@((Months == 1))">
+                                    1
+                                </option>
+                                <option value="3" selected="@((Months == 3))">
+                                    3
+                                </option>
+                                <option value="6" selected="@((Months == 6))">
+                                    6
+                                </option>
+                                <option value="12" selected="@((Months == 12))">
+                                    12
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--#endregion Filtros-->
+        </div>
+
+        <hr />
+    </div>
+
+    <div class="row">
         <div class="col-12 text-center">
             <button class="btn btn-primary" @onclick="() => ExportChart(chartMain, BtnExportPNG)">
                 <i class="fa-solid fa-file-image"></i> PNG
             </button>
             <button class="btn btn-primary" @onclick="() => ExportChart(chartMain, BtnExportJPG)">
                 <i class="fa-solid fa-file-image"></i> JPG
+            </button>
+            <button type="button" class="btn btn-success" @onclick="ExportData">
+                <i class="fas fa-file-excel"></i> Exportar
             </button>
         </div>
     </div>
@@ -67,6 +118,8 @@ else
 
     public string Authorization { get; set; }
     public bool IsLoading { get; set; } = true;
+
+    private int Months { get; set; } = 3;
 
     private ResponseGenericModel ResponseModel { get; set; }
     private Data ResponseData { get; set; }
@@ -196,6 +249,55 @@ else
         await JS.InvokeVoidAsync("exportChart", chartId, format);
     }
 
+    private async Task ExportData()
+    {
+        var url = $"{NavigationManager.BaseUri}api/home/v1/export/excel?months={Months}&Authorization={Hefesto.Encode.EncodeUtil.encodeToBase64(Authorization)}"; // La URL de tu acción que devuelve el FileStreamResult
+        await JS.InvokeVoidAsync("window.open", url, "_blank");
+    }
+
+    private async Task OnSelectMonthsChange(ChangeEventArgs e)
+    {
+        var selectedValue = e.Value.ToString();
+        Console.WriteLine($"[OnSelectChange]: {selectedValue}");
+
+        if (String.IsNullOrEmpty(selectedValue))
+        {
+            Months = 1;
+            await GetContent();
+        }
+        else
+        {
+            try
+            {
+                Months = int.Parse(selectedValue);
+
+                if (Months == 1
+                    || Months == 3
+                    || Months == 6
+                    || Months == 12
+                )
+                {
+                    // Esta correcto
+                }
+                else
+                {
+                    Months = 1;
+                }
+            }
+            catch
+            {
+                Months = 1;
+            }
+
+            await GetContent();
+        }
+
+        StateHasChanged(); // Forzar renderizado
+
+        await JS.InvokeVoidAsync("closeOffcanvas", "offCanvasUltimosMeses"); // Llamar a JavaScript para cerrar el offcanvas
+    }
+
+
 
 
     private async Task GetContent()
@@ -210,7 +312,7 @@ else
             }
             catch { }
 
-            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/home/v1/get");
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/home/v1/get?months={Months}");
 
             try
             {
