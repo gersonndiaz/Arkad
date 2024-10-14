@@ -1,7 +1,36 @@
 ﻿@page "/"
+@using Arkad.Client.Shared.Components
+@using Hefesto.Response
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+
+<ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code{
+    public bool Status { get; set; } = true;
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    public string Authorization { get; set; }
+    public bool IsLoading { get; set; } = true;
+
+    private ResponseGenericModel ResponseModel { get; set; }
+    //private Data ResponseData { get; set; }
+}

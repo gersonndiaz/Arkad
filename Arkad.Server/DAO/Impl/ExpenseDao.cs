@@ -181,6 +181,66 @@ namespace Arkad.Server.DAO.Impl
         }
 
         /// <summary>
+        /// Obtiene controles dentro del rango de meses indicado
+        /// </summary>
+        /// <param name="months"></param>
+        /// <param name="active"></param>
+        /// <returns></returns>
+        public List<ExpenseControl> GetControlAllByMonths(int months, bool? active)
+        {
+            try
+            {
+                Expression<Func<ExpenseControl, bool>> activeExpression;
+                if (active.HasValue)
+                {
+                    activeExpression = x => x.Active == active.Value;
+                }
+                else
+                {
+                    activeExpression = x => (x.Active == true || x.Active == false);
+                }
+
+                int year = DateTime.Now.Year;
+                int month = DateTime.Now.Month;
+                List<Period> periods = new List<Period>();
+
+                months = (months <= 0) ? 1 : months;
+
+                for (int i = 0; i < months; i++)
+                {
+                    int currentMonth = month - i;
+                    int currentYear = year;
+
+                    if (currentMonth <= 0)
+                    {
+                        currentMonth += months;
+                        currentYear--;
+                    }
+
+                    var period = appDbContext.Periods.Where(x => x.Year == currentYear).Where(x => x.Month == currentMonth).FirstOrDefault();
+                    if (period is not null)
+                    {
+                        periods.Add(period);
+                    }
+                }
+
+                var control = (periods is not null && periods.Count > 0) ? appDbContext.ExpensesControl
+                                                                                        .Where(x => periods.Select(y => y.Id).Contains(x.Id))
+                                                                                        .Where(activeExpression)
+                                                                                        .OrderBy(x => x.Period.Year)
+                                                                                        .ThenBy(x => x.Period.Month)
+                                                                                        .ToList()
+                                                                         : null;
+                return control;
+            }
+            catch (Exception e)
+            {
+                logger.Error($"[{TAG}] -- {e}");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Se actualiza la información del control de gastos
         /// </summary>
         /// <param name="control"></param>
