@@ -1,25 +1,37 @@
-﻿function createBarChart(elementId, labels, datasets) {
-    var ctx = document.getElementById(elementId).getContext('2d');
-    var chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
+﻿function createBarChart(elementId, title, labels, datasets) {
+    // Obtener el canvas y su contexto
+    const canvas = document.getElementById(elementId);
+    const ctx = canvas.getContext('2d');
 
-function createBarChart(elementId, title, labels, datasets) {
-    var ctx = document.getElementById(elementId).getContext('2d');
-    var chart = new Chart(ctx, {
+    // Destruir el gráfico anterior si ya existe
+    if (canvas.chartInstance) {
+        canvas.chartInstance.destroy();
+    }
+
+    // Plugin para mostrar los valores en la parte superior de las barras
+    const displayDataPlugin = {
+        id: 'displayData',
+        afterDatasetsDraw(chart) {
+            const { ctx, data } = chart;
+
+            data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chart.getDatasetMeta(datasetIndex);
+                meta.data.forEach((bar, index) => {
+                    const value = dataset.data[index];
+                    ctx.save();
+                    ctx.font = 'bold 12px Arial';
+                    ctx.fillStyle = 'deepskyblue';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(value, bar.x, bar.y - 5); // Ajuste de posición
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
+    // Crear y asociar el gráfico al canvas
+    canvas.chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -29,19 +41,30 @@ function createBarChart(elementId, title, labels, datasets) {
             responsive: true,
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Total'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Periodo (Mes/Año)'
+                    }
                 }
             },
             plugins: {
                 legend: {
-                    position: 'top',
+                    position: 'top'
                 },
                 title: {
                     display: true,
                     text: title
                 }
             }
-        }
+        },
+        plugins: [displayDataPlugin] // Agregar el plugin personalizado
     });
 }
 

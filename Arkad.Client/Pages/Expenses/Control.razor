@@ -70,7 +70,8 @@ else
                     <div class="col-sm-12">
                         <div class="text-end">
 
-                            @if (ExpenseControl is not null && !ExpenseControl.Finished)
+                            @if ((ExpenseControl is not null && !ExpenseControl.Finished)
+                           || (ExpenseControl is null))
                             {
                                 <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#itemsModal">
                                     <i class="fa-solid fa-table"></i> Items

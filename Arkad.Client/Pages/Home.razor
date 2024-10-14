@@ -1,12 +1,49 @@
 ﻿@page "/"
 @using Arkad.Client.Shared.Components
+@using Arkad.Shared.Models
 @using Hefesto.Response
+@using Newtonsoft.Json
 
-<PageTitle>Home</PageTitle>
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<PageTitle>Dashboard</PageTitle>
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+@if (IsLoading)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12 text-center">
+            <h1>Cargando...</h1>
+        </div>
+    </div>
+
+    <hr />
+}
+else
+{
+    <div class="row">
+        <div class="col-12 text-center">
+            <button class="btn btn-primary" @onclick="() => ExportChart(chartMain, BtnExportPNG)">
+                <i class="fa-solid fa-file-image"></i> PNG
+            </button>
+            <button class="btn btn-primary" @onclick="() => ExportChart(chartMain, BtnExportJPG)">
+                <i class="fa-solid fa-file-image"></i> JPG
+            </button>
+        </div>
+    </div>
+}
+
+<div class="row">
+    <div class="col-12">
+        <canvas id="mainChart" width="400" height="200"></canvas>
+    </div>
+</div>
 
 
 <ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
@@ -32,5 +69,236 @@ Welcome to your new app.
     public bool IsLoading { get; set; } = true;
 
     private ResponseGenericModel ResponseModel { get; set; }
-    //private Data ResponseData { get; set; }
+    private Data ResponseData { get; set; }
+
+    private string[] _labels;
+    private List<object> _datasets = new();
+
+    private string BtnExportPNG = "png";
+    private string BtnExportJPG = "jpeg";
+
+    private string chartMain = "mainChart";
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await GetContent();
+
+            IsLoading = false;
+
+            try
+            {
+                // Llama a la función JavaScript para inicializar los popovers
+                await JS.InvokeVoidAsync("bootstrapHelpers.initializePopovers");
+                Console.WriteLine("Popovers initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing popovers: {ex.Message}");
+            }
+
+            try
+            {
+                // Llama a la función JavaScript para inicializar los tooltips
+                await JS.InvokeVoidAsync("bootstrapHelpers.initializeTooltips");
+                Console.WriteLine("Tooltips initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing tooltips: {ex.Message}");
+            }
+
+            StateHasChanged(); // Forzar renderizado
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page de forma asincrona
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    string GetQueryParam(string parmName)
+    {
+        var uriBuilder = new UriBuilder(NavigationManager.Uri);
+        var q = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
+        return q[parmName] ?? "";
+    }
+
+
+    private async Task DrawMainChart(Data data)
+    {
+        await Task.Delay(500);
+
+        Console.WriteLine($"[DrawMainChart()]: Ejecutando...");
+
+        try
+        {
+            // Crear las etiquetas del gráfico (Mes/Año)
+            var controlDataItems = data?.ControlData?.Items;
+            _labels = controlDataItems.Select(i => $"{i.Month.ToString("D2")}/{i.Year}").ToArray();
+
+            // Crear dataset con los valores del total
+            var dataset = new
+            {
+                label = "Total de Gastos",
+                data = controlDataItems.Select(i => (double)i.Total).ToArray(),
+                backgroundColor = GetRandomColor(),
+                borderColor = GetRandomColor(),
+                borderWidth = 1
+            };
+
+            _datasets.Clear();
+            _datasets.Add(dataset);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[DrawMainChart()]: {e}");
+        }
+
+        await RenderChart();
+    }
+
+    private string GetRandomColor()
+    {
+        Random rand = new Random();
+        return $"rgba({rand.Next(256)}, {rand.Next(256)}, {rand.Next(256)}, 0.8)";
+    }
+
+    private async Task RenderChart()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("createBarChart", "mainChart", "Gastos Mensuales", _labels, _datasets.ToArray());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[RenderChart()]: {e}");
+        }
+    }
+
+    private async Task ExportChart(string chartId, string format)
+    {
+        await JS.InvokeVoidAsync("exportChart", chartId, format);
+    }
+
+
+
+    private async Task GetContent()
+    {
+        try
+        {
+            Authorization = await LocalStorageComponent.Get("Authorization");
+
+            try
+            {
+                Http.DefaultRequestHeaders.Add("Authorization", Authorization);
+            }
+            catch { }
+
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/home/v1/get");
+
+            try
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", jsonResponse);
+
+                try
+                {
+                    ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(jsonResponse);
+
+                    if (ResponseModel.status.Equals("success", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        try
+                        {
+                            ResponseData = JsonConvert.DeserializeObject<Data>($"{ResponseModel.data}");
+
+                            await DrawMainChart(ResponseData);
+                        }
+                        catch (Exception e)
+                        {
+                            //
+                        }
+                    }
+                    else
+                    {
+                        if (!String.IsNullOrEmpty(ResponseModel.urlRedirect))
+                        {
+                            await Task.Delay(2000);
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+
+                            // Redirigir a otra URL
+                            NavigationManager.NavigateTo(ResponseModel.urlRedirect);
+                        }
+                        else
+                        {
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    await JS.InvokeVoidAsync("console.log", $"Error 0: {e}");
+                }
+            }
+            catch (Exception e)
+            {
+                await JS.InvokeVoidAsync("console.log", $"Error 1: {e}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JS.InvokeVoidAsync("console.log", $"Error 2: {e}");
+        }
+
+        IsLoading = false;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+
+
+    public class ControlData
+    {
+        [JsonProperty("Items")]
+        public List<Item> Items;
+    }
+
+    public class Data
+    {
+        [JsonProperty("controlData")]
+        public ControlData ControlData;
+
+        [JsonProperty("controls")]
+        public List<ExpenseControl> Controls;
+
+        [JsonProperty("role")]
+        public Role Role;
+    }
+
+    public class Item
+    {
+        [JsonProperty("Year")]
+        public int Year;
+
+        [JsonProperty("Month")]
+        public int Month;
+
+        [JsonProperty("Total")]
+        public int Total;
+    }
 }

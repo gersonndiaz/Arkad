@@ -45,7 +45,7 @@ namespace Arkad.Server.Controllers
 
                 string Authorization = Request.Headers[TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION].ToString();
 
-                string sMonths = Request.Form["months"];
+                string sMonths = Request.Query["months"];
 
                 if (String.IsNullOrEmpty(Authorization))
                 {
@@ -112,6 +112,7 @@ namespace Arkad.Server.Controllers
                     else
                     {
                         dynamic controlData = new ExpandoObject();
+                        controlData.Items = new List<dynamic>();
 
                         if (controls is not null)
                         {
@@ -130,10 +131,13 @@ namespace Arkad.Server.Controllers
                                 {
                                     foreach(var expense in expenses)
                                     {
-                                        cData.Total += expense.Value;
+                                        if (!expense.Item.Auto)
+                                        {
+                                            cData.Total += expense.Value;
+                                        }
                                     }
                                 }
-                                controlData.Add(cData);
+                                controlData.Items.Add(cData);
                             }
                         }
 

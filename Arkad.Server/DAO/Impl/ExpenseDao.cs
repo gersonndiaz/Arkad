@@ -225,7 +225,7 @@ namespace Arkad.Server.DAO.Impl
                 }
 
                 var control = (periods is not null && periods.Count > 0) ? appDbContext.ExpensesControl
-                                                                                        .Where(x => periods.Select(y => y.Id).Contains(x.Id))
+                                                                                        .Where(x => periods.Select(y => y.Id).Contains(x.PeriodId))
                                                                                         .Where(activeExpression)
                                                                                         .OrderBy(x => x.Period.Year)
                                                                                         .ThenBy(x => x.Period.Month)
