@@ -135,6 +135,16 @@ namespace Arkad.Shared.Utils.Formula
                     string formattedResult = result.ToString("F3", CultureInfo.InvariantCulture);
                     return $"[OK]: {replacedFormula} = {formattedResult}";
                 }
+                else if (evaluationResult is float result2)
+                {
+                    string formattedResult = result2.ToString("F3", CultureInfo.InvariantCulture);
+                    return $"[OK]: {replacedFormula} = {formattedResult}";
+                }
+                else if (evaluationResult is int result3)
+                {
+                    string formattedResult = result3.ToString("F3", CultureInfo.InvariantCulture);
+                    return $"[OK]: {replacedFormula} = {formattedResult}";
+                }
                 else
                 {
                     return $"[ERROR]: El resultado de la evaluación no es un número válido.";
@@ -266,6 +276,14 @@ namespace Arkad.Shared.Utils.Formula
                 if (evaluationResult is double result)
                 {
                     return (float)result;
+                }
+                else if (evaluationResult is double result2)
+                {
+                    return (float)result2;
+                }
+                else if (evaluationResult is double result3)
+                {
+                    return (float)result3;
                 }
                 else
                 {
