@@ -1,0 +1,468 @@
+﻿@layout MainLayout
+@page "/account/profile"
+@using Arkad.Client.Shared.Components
+@using Arkad.Shared
+@using Arkad.Shared.Models
+@using Hefesto.Response
+@using Microsoft.AspNetCore.Components.Forms
+@using Newtonsoft.Json
+
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+@if (IsLoading)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12 text-center">
+            <h1>Cargando...</h1>
+        </div>
+    </div>
+
+    <hr />
+}
+else
+{
+
+    <hr />
+    <div class="row">
+        <div class="col-12">
+            <h1>Mi perfil</h1>
+        </div>
+    </div>
+
+    <hr />
+
+
+    <div class="row">
+        <div class="col-12">
+
+            <div class="bg-white shadow rounded-lg d-block d-sm-flex">
+                <div class="profile-tab-nav border-right">
+                    <div class="p-4">
+                        <div class="img-circle text-center mb-3">
+                            <img src="data:image/png;base64,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" alt="Image" class="shadow" height="50" />
+                        </div>
+                        <h4 class="text-center">
+                            @User.Name
+                        </h4>
+                    </div>
+                    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <a class="nav-link active" id="account-tab" data-bs-toggle="pill" href="#account" role="tab" aria-controls="account" aria-selected="true">
+                            <i class="fa fa-user text-center mr-1"></i>
+                            Usuario
+                        </a>
+                        <a class="nav-link" id="password-tab" data-bs-toggle="pill" href="#password" role="tab" aria-controls="password" aria-selected="false">
+                            <i class="fa fa-key text-center mr-1"></i>
+                            Contraseña
+                        </a>
+                    </div>
+                </div>
+
+                <div class="tab-content p-4 p-md-5" id="v-pills-tabContent">
+                <div class="tab-pane fade show active" id="account" role="tabpanel" aria-labelledby="account-tab">
+                    <h3 class="mb-4">Mis Datos</h3>
+                    <EditForm id="form-update-profile" Model="User" OnValidSubmit="Update">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Nombre</label>
+                                    <input name="name" type="text" class="form-control" id="nombre" @bind-value="User.Name" required />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Correo electrónico</label>
+                                    <input name="email" type="email" class="form-control" id="correo" @bind-value="User.Email" required />
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#updateModal">
+                                <i class="fas fa-user-edit"></i> Actualizar
+                            </button>
+                            <button type="reset" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+                    </EditForm>
+
+                        <!--#region Modal Actualizar -->
+                        <div class="modal fade" id="updateModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="updateModalLabel">¿Realmente desea actualizar su información?</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body text-black-50 text-center">
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <b>Por seguridad al actualizar su información, es requerida su contraseña actual.</b>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <div>
+                                                    <label for="mclave">Contraseña</label>
+                                                    <div class="input-group mb-3">
+                                                        <input type="password" name="password" id="mclave" class="form-control" placeholder="Contraseña" aria-label="Contraseña" aria-describedby="button-clave1" required @bind-value="User.Password">
+                                                        <div class="input-group-append">
+                                                            <button class="btn btn-outline-info" type="button" id="mclave" onclick="showAndHideInputPassword(this);">Ver / Ocultar</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn btn-success right" type="submit" form="form-update-profile">Confirmar</button>
+                                        <button class="btn btn-secondary right" type="button" data-bs-dismiss="modal" aria-label="Close" onclick="closeAllModal();">Cancelar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--#endregion Modal Actualizar -->
+                </div>
+                <div class="tab-pane fade" id="password" role="tabpanel" aria-labelledby="password-tab">
+                    <h3 class="mb-4">Cambiar Contraseña</h3>
+                    <EditForm id="update-password-form" Model="User" OnValidSubmit="UpdatePassword">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Contraseña actual</label>
+                                    <input name="password" type="password" class="form-control" @bind-value="User.Password" placeholder="Contraseña Actual" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Contraseña nueva</label>
+                                    <input name="passwordnew" type="password" class="form-control" @bind-value="User.PasswordNew" placeholder="Contraseña Nueva" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Confirmar contraseña nueva</label>
+                                    <input name="passwordrepeat" type="password" class="form-control" @bind-value="User.PasswordRepeat" placeholder="Contraseña Nueva" />
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-success">Actualizar</button>
+                            <button type="reset" class="btn btn-light">Cancelar</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+}
+
+<ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code {
+    private string UserName { get; set; }
+    private string UserRole { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    // Objeto que hace referencia a un componente de paginación
+    private PaginationComponent PaginationComponent;
+
+    public string Authorization { get; set; }
+    public bool IsLoading { get; set; } = true;
+
+    private ResponseGenericModel ResponseModel { get; set; }
+    private Data ResponseData { get; set; }
+
+    private User User { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await GetContent();
+
+            StateHasChanged(); // Forzar renderizado
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task GetContent()
+    {
+        try
+        {
+            Authorization = await LocalStorageComponent.Get("Authorization");
+
+            try
+            {
+                Http.DefaultRequestHeaders.Add("Authorization", Authorization);
+            }
+            catch { }
+
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/account/profile/v1/get");
+
+            try
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", jsonResponse);
+
+                try
+                {
+                    ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(jsonResponse);
+
+                    if (ResponseModel.status.Equals("success", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        try
+                        {
+                            ResponseData = JsonConvert.DeserializeObject<Data>($"{ResponseModel.data}");
+                            User = ResponseData.User;
+                        }
+                        catch (Exception e)
+                        {
+                            //
+                        }
+                    }
+                    else
+                    {
+                        if (!String.IsNullOrEmpty(ResponseModel.urlRedirect))
+                        {
+                            await Task.Delay(2000);
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+
+                            // Redirigir a otra URL
+                            NavigationManager.NavigateTo(ResponseModel.urlRedirect);
+                        }
+                        else
+                        {
+                            await JS.InvokeVoidAsync("alert", $"{ResponseModel.message}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    await JS.InvokeVoidAsync("console.log", $"Error 0: {e}");
+                }
+            }
+            catch (Exception e)
+            {
+                await JS.InvokeVoidAsync("console.log", $"Error 1: {e}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JS.InvokeVoidAsync("console.log", $"Error 2: {e}");
+        }
+
+        IsLoading = false;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+    private async Task Update()
+    {
+        TitleLoading = "Actualizando información...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("name", User.Name),
+                                    new KeyValuePair<string, string>("email", User.Email),
+                                    new KeyValuePair<string, string>("password", User.Password)
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/account/profile/v1/update");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Console.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                await JS.InvokeVoidAsync("closeAllModal");
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+            Console.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+            await JS.InvokeVoidAsync("alert", $"Error: {e.Message}");
+        }
+
+        await GetContent();
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+    private async Task UpdatePassword()
+    {
+        TitleLoading = "Actualizando contraseña...";
+        await ModalsComponent.ShowLoadingModal(true);
+
+        try
+        {
+            var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("password", User.Password),
+                                    new KeyValuePair<string, string>("passwordnew", User.PasswordNew),
+                                    new KeyValuePair<string, string>("passwordrepeat", User.PasswordRepeat)
+                                };
+            var content = new FormUrlEncodedContent(formData);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/account/profile/v1/password/update");
+            request.Headers.Add(TagUtil.TAG_REQUEST_HEADER_AUTHORIZATION, Authorization);
+            request.Content = content;
+
+            var httpResponse = await Http.SendAsync(request);
+            var responseString = await httpResponse.Content.ReadAsStringAsync();
+            ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+            Console.WriteLine($"Response: {responseString}");
+            await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+            if (ResponseModel.status != StatusResponseCodes.StatusResponseSuccess)
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+                await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+            }
+            else
+            {
+                Title = ResponseModel.subject;
+                Message = ResponseModel.message;
+
+                await JS.InvokeVoidAsync("closeAllModal");
+            }
+        }
+        catch (Exception e)
+        {
+            Title = "Error";
+            Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+            Console.WriteLine($"Error: {e}");
+            await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+            await JS.InvokeVoidAsync("alert", $"Error: {e.Message}");
+        }
+
+        await GetContent();
+        await Task.Delay(1000);
+        await ModalsComponent.ShowLoadingModal(false);
+    }
+
+
+    public class Data
+    {
+        [JsonProperty("user")]
+        public User User;
+    }
+}
+
+<style>
+    .shadow {
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .profile-tab-nav {
+        min-width: 250px;
+    }
+
+    .tab-content {
+        flex: 1;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .nav-pills a.nav-link {
+        padding: 15px 20px;
+        border-bottom: 1px solid #ddd;
+        border-radius: 0;
+    }
+
+        .nav-pills a.nav-link i {
+            width: 20px;
+        }
+
+    .img-circle img {
+        height: 100px;
+        width: 100px;
+        border-radius: 100%;
+        border: 5px solid #fff;
+    }
+
+        .avatar-link {
+            display: inline-block;
+            position: relative;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+
+            .avatar-link:hover .avatar-image {
+                opacity: 0.7;
+            }
+
+            .avatar-link:hover::after {
+                content: '\f030'; /* ícono de cámara, puedes cambiarlo */
+                font-family: FontAwesome;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: white;
+                font-size: 24px;
+            }
+
+        .avatar-image {
+            transition: opacity 0.3s ease;
+        }
+</style>

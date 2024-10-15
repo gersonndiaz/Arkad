@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arkad.Client", "Arkad.Clien
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arkad.Shared", "Arkad.Shared\Arkad.Shared.csproj", "{2D4AA42C-45B5-4FCE-9017-4D181B66125F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Arkad.UnitTests", "Arkad.UnitTests\Arkad.UnitTests.csproj", "{BB8B04A8-0F27-4ECF-A059-E65A71C9A059}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arkad.UnitTests", "Arkad.UnitTests\Arkad.UnitTests.csproj", "{BB8B04A8-0F27-4ECF-A059-E65A71C9A059}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{47EDAD5C-265F-4B50-A665-E323E69196E3}"
 EndProject

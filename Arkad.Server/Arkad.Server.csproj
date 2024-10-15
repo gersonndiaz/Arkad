@@ -25,13 +25,16 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="8.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.5" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.6" />
     <PackageReference Include="NLog" Version="5.3.3" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.2" />
     <PackageReference Include="UAParser.Core" Version="4.0.4" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Areas\Account\Data\" />
+    <Folder Include="Areas\Account\Models\" />
+    <Folder Include="Areas\Account\Views\" />
     <Folder Include="Areas\Auth\Data\" />
     <Folder Include="Areas\Auth\Models\" />
     <Folder Include="Areas\Auth\Views\" />

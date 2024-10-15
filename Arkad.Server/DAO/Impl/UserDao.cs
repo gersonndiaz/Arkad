@@ -122,6 +122,72 @@ namespace Arkad.Server.DAO.Impl
 
             return success;
         }
+
+        /// <summary>
+        /// Actualiza información de usuario
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="history"></param>
+        /// <param name="historyUser"></param>
+        /// <returns></returns>
+        public bool Update(User user, History history, HistoryUser historyUser)
+        {
+            bool success = false;
+
+            try
+            {
+                #region TRANSACCION
+                using (var dbContextTransaction = appDbContext.Database.BeginTransaction())
+                {
+                    try
+                    {
+                        appDbContext.Users.Attach(user);
+                        appDbContext.Entry(user).State = EntityState.Modified;
+                        success = (appDbContext.SaveChanges() > 0) ? true : false;
+
+                        #region History
+                        if (success)
+                        {
+                            appDbContext.Histories.Attach(history);
+                            appDbContext.Entry(history).State = EntityState.Added;
+                            success = (appDbContext.SaveChanges() > 0) ? true : false;
+
+                            if (success)
+                            {
+                                appDbContext.HistoryUsers.Attach(historyUser);
+                                appDbContext.Entry(historyUser).State = EntityState.Added;
+                                success = (appDbContext.SaveChanges() > 0) ? true : false;
+                            }
+                        }
+                        #endregion History
+                    }
+                    catch (Exception e)
+                    {
+                        success = false;
+                        logger.Error($"{TAG} -- {e}");
+                    }
+
+                    #region COMMIT OR ROLLBACK TRANSACTION
+                    if (success)
+                    {
+                        dbContextTransaction.Commit();
+                    }
+                    else
+                    {
+                        dbContextTransaction.Rollback();
+                    }
+                    #endregion COMMIT OR ROLLBACK TRANSACTION
+                }
+                #endregion TRANSACCION
+            }
+            catch (Exception e)
+            {
+                success = false;
+                logger.Error($"{TAG} -- {e}");
+            }
+
+            return success;
+        }
         #endregion User
 
         #region Rol
