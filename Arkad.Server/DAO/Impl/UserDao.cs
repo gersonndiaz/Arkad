@@ -76,6 +76,75 @@ namespace Arkad.Server.DAO.Impl
         }
 
         /// <summary>
+        /// Existe usuario activo
+        /// </summary>
+        /// <returns></returns>
+        public bool AnyActive()
+        {
+            bool success = false;
+
+            try
+            {
+                success = appDbContext.Users.Any(x => x.Active);
+            }
+            catch (Exception e)
+            {
+                success = false;
+                logger.Error($"{TAG} -- {e}");
+            }
+
+            return success;
+        }
+
+        /// <summary>
+        /// Registra un nuevo usuario
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        public bool Save(User user)
+        {
+            bool success = false;
+
+            try
+            {
+                #region TRANSACCION
+                using (var dbContextTransaction = appDbContext.Database.BeginTransaction())
+                {
+                    try
+                    {
+                        appDbContext.Users.Attach(user);
+                        appDbContext.Entry(user).State = EntityState.Added;
+                        success = (appDbContext.SaveChanges() > 0) ? true : false;
+                    }
+                    catch (Exception e)
+                    {
+                        success = false;
+                        logger.Error($"{TAG} -- {e}");
+                    }
+
+                    #region COMMIT OR ROLLBACK TRANSACTION
+                    if (success)
+                    {
+                        dbContextTransaction.Commit();
+                    }
+                    else
+                    {
+                        dbContextTransaction.Rollback();
+                    }
+                    #endregion COMMIT OR ROLLBACK TRANSACTION
+                }
+                #endregion TRANSACCION
+            }
+            catch (Exception e)
+            {
+                success = false;
+                logger.Error($"{TAG} -- {e}");
+            }
+
+            return success;
+        }
+
+        /// <summary>
         /// Actualiza datos del usuario
         /// </summary>
         /// <param name="user"></param>

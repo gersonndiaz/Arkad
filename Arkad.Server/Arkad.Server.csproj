@@ -11,6 +11,7 @@
 	</PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Arkad.RunApp\Arkad.RunApp.csproj" />
     <ProjectReference Include="..\Arkad.Shared\Arkad.Shared.csproj" />
     <ProjectReference Include="..\Arkad.Client\Arkad.Client.csproj" />
   </ItemGroup>
@@ -38,6 +39,9 @@
     <Folder Include="Areas\Auth\Data\" />
     <Folder Include="Areas\Auth\Models\" />
     <Folder Include="Areas\Auth\Views\" />
+    <Folder Include="Areas\Config\Data\" />
+    <Folder Include="Areas\Config\Models\" />
+    <Folder Include="Areas\Config\Views\" />
     <Folder Include="Areas\Expense\Data\" />
     <Folder Include="Areas\Expense\Models\" />
     <Folder Include="Areas\Expense\Views\" />

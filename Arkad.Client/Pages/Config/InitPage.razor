@@ -1,0 +1,658 @@
+﻿@layout LoginLayout
+@page "/config/init"
+
+@inject HttpClient Http
+@inject IConfiguration configuration
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+@using Arkad.Client.Shared.Components
+@using Arkad.Shared
+@using Arkad.Shared.Models
+@using Hefesto.Response;
+@using System.Net;
+@using Hefesto.Rut;
+@using Hefesto.Validation;
+@using Microsoft.AspNetCore.Components.Web;
+@using Microsoft.Extensions.FileProviders;
+@using Microsoft.JSInterop;
+@using Newtonsoft.Json;
+@using System.Web;
+@using System.Diagnostics;
+@using Microsoft.AspNetCore.Components.Forms;
+@using Microsoft.Extensions.Configuration;
+@using Microsoft.Extensions.Configuration.Json;
+@using System.Reflection;
+
+@if (IsLoading)
+{
+    <hr />
+    <div class="row">
+        <div class="col-12 text-center">
+            <h1>Cargando...</h1>
+        </div>
+    </div>
+
+    <hr />
+}
+else
+{
+    <div class="vh-100 d-flex align-items-center ">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-10 offset-lg-1">
+                    <div class="shadow rounded border border-white">
+                        <div class="row">
+                            <div class="col-md-5 d-md-none d-sm-inline-flex justify-content-center align-items-center bg-secondary bg-opacity-50 text-center">
+                                <div class="d-flex flex-column justify-content-center align-items-center">
+
+                                    <img class="w-75 p-2" src="/img/ckelar-logo.png" />
+
+                                    <div>
+                                        <img src="/img/logo.png" class="w-75 p-2" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-7 pe-0">
+                                <div class="form-left h-100 py-5 px-5">
+                                    <EditForm Model="@User" OnValidSubmit="@Registrar">
+
+                                        <input id="clientIp" name="client-ip" type="hidden" @bind-value="@ClientIP" />
+
+                                        <div class="col-12">
+                                            <label>Nombre de Usuario<span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <div class="input-group-text"><i class="fa fa-user"></i></div>
+                                                <input name="name" type="text" class="form-control" placeholder="Nombre de Usuario" autocomplete="off" autofocus required @bind-value="@User.Name">
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label>Correo electrónico<span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <div class="input-group-text"><i class="fa-solid fa-at"></i></div>
+                                                <input name="email" type="text" class="form-control @usernameInputIsValidClasses" placeholder="Correo electrónico" autocomplete="off" autofocus required @bind-value="@User.Email" @oninput="UsernameKeyUp">
+                                                @if (usernameIsValid.HasValue && !usernameIsValid.Value)
+                                                {
+                                                    <div class="invalid-feedback">
+                                                        @usernameErrMessage
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label>Repetir correo electrónico<span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <div class="input-group-text"><i class="fa-solid fa-at"></i></div>
+                                                <input name="emailrepeat" type="text" class="form-control @usernameRepeatInputIsValidClasses" placeholder="Correo electrónico" autocomplete="off" autofocus required @bind-value="@User.EmailRepeat" @oninput="UsernameRepeatKeyUp">
+                                                @if (usernameRepeatIsValid.HasValue && !usernameRepeatIsValid.Value)
+                                                {
+                                                    <div class="invalid-feedback">
+                                                        @usernameRepeatErrMessage
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label>Contraseña<span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <div class="input-group-text"><i class="fa fa-key"></i></div>
+                                                <input name="password" type="password" class="form-control @passwordInputIsValidClasses" placeholder="Contraseña" required @bind-value="@User.Password" @oninput="PasswordKeyUp">
+                                                @if (passwordIsValid.HasValue && !passwordIsValid.Value)
+                                                {
+                                                    <div class="invalid-feedback">
+                                                        @passwordErrMessage
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label>Repetir Contraseña<span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <div class="input-group-text"><i class="fa fa-key"></i></div>
+                                                <input name="passwordrepeat" type="password" class="form-control @passwordRepeatInputIsValidClasses" placeholder="Contraseña" required @bind-value="@User.PasswordRepeat" @oninput="PasswordRepeatKeyUp">
+                                                @if (passwordRepeatIsValid.HasValue && !passwordRepeatIsValid.Value)
+                                                {
+                                                    <div class="invalid-feedback">
+                                                        @passwordRepeatErrMessage
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        @* <div class="col-sm-12">
+                                    <label class="form-label">Rol</label>
+                                    <select class="form-select" @onchange="(e) => OnSelectUserChange(e, User)">
+                                    <option value="">-- Seleccione --</option>
+                                    @if (Roles is not null)
+                                    {
+                                    foreach (var role in Roles)
+                                    {
+                                    <option value="@role.Id">
+                                    @role.Name
+                                    </option>
+                                    }
+                                    }
+                                    </select>
+                                    </div> *@
+
+                                        <div class="col-12 text-center">
+                                            <button type="submit" class="btn btn-success px-4 mt-4">
+                                                <i class="fa-solid fa-user-plus"></i> Crear
+                                            </button>
+                                        </div>
+                                    </EditForm>
+
+                                    <p class="text-center mt-3">Su IP actual es: @ClientIP</p>
+                                </div>
+                            </div>
+                            <div class="col-md-5 d-none d-md-inline-flex justify-content-center align-items-center bg-secondary bg-opacity-50 text-center">
+                                <div class="d-flex flex-column justify-content-center align-items-center">
+
+                                    <img class="img-fluid p-2" src="/img/ckelar-logo.png" />
+
+                                    <div>
+                                        <img src="/img/logo.png" class="img-fluid p-2" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    a {
+        text-decoration: none;
+    }
+
+    .form-right i {
+        font-size: 100px;
+    }
+</style>
+
+<ModalsComponent @ref="ModalsComponent" TitleLoading="@TitleLoading" MessageAlert="@Message" TitleAlert="@Title"></ModalsComponent>
+<LocalStorageComponent @ref="LocalStorageComponent" />
+
+@code
+{
+    public string Authorization { get; set; }
+    public bool IsLoading { get; set; } = true;
+
+    // Atributos que son utilizados en el formulario
+    public string ClientIP { get; set; }
+
+    // Objeto que obtiene la respuesta de Registrar()
+    private ResponseGenericModel ResponseGenericModel { get; set; }
+    private Data ResponseData { get; set; }
+    private List<Role> Roles { get; set; } = null;
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de alerta
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    // Atributos utilizados para mostrar datos en el ModalsComponent en el modal de loading
+    private string TitleLoading { get; set; }
+
+    // Objeto que hace referencia a una page que contiene en este caso los modals utilizados por la aplicación, siendo absolutamente reutilizables
+    private ModalsComponent ModalsComponent;
+
+    // Objeto que hace referencia a un componente que gestiona el acceso a Local Storage
+    private LocalStorageComponent LocalStorageComponent;
+
+    // Objeto para validar el formulario por sus Etiquetas de anotación (Si tiene)
+    public Arkad.Shared.Models.User User = new Arkad.Shared.Models.User();
+
+    // Atributos para obtener el valor del nombre de usuario y contraseña mientras se escribe
+    private string userNameValue = string.Empty;
+    private string passwordValue = string.Empty;
+
+
+    #region Validación Formulario
+    // Atributos para manejar si el nombre de usuario es válido
+    private bool? usernameIsValid;
+    private string usernameErrMessage = string.Empty;
+    private string usernameInputIsValidClasses => (!usernameIsValid.HasValue)
+                                                    ? ""
+                                                    : ((usernameIsValid.HasValue && usernameIsValid.Value)
+                                                        ? "is-valid"
+                                                        : "is-invalid");
+
+    private bool? usernameRepeatIsValid;
+    private string usernameRepeatErrMessage = string.Empty;
+    private string usernameRepeatInputIsValidClasses => (!usernameRepeatIsValid.HasValue)
+                                                    ? ""
+                                                    : ((usernameRepeatIsValid.HasValue && usernameRepeatIsValid.Value)
+                                                        ? "is-valid"
+                                                        : "is-invalid");
+
+    // Atributos para manejar si la contraseña es o no válida
+    private bool? passwordIsValid;
+    private string passwordErrMessage = string.Empty;
+    private string passwordInputIsValidClasses => (!passwordIsValid.HasValue)
+                                                    ? ""
+                                                    : ((passwordIsValid.HasValue && passwordIsValid.Value)
+                                                        ? "is-valid"
+                                                        : "is-invalid");
+
+    private bool? passwordRepeatIsValid;
+    private string passwordRepeatErrMessage = string.Empty;
+    private string passwordRepeatInputIsValidClasses => (!passwordRepeatIsValid.HasValue)
+                                                    ? ""
+                                                    : ((passwordRepeatIsValid.HasValue && passwordRepeatIsValid.Value)
+                                                        ? "is-valid"
+                                                        : "is-invalid");
+    #endregion Validación Formulario
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            #region Obtener IP
+            try
+            {
+                ClientIP = await Http.GetStringAsync("https://api.ipify.org");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error: {e}");
+            }
+            #endregion Obtener IP
+
+            await GetContent();
+
+            StateHasChanged(); // Forzar renderizado
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Inicializa los componentes necesarios al arrancar la page de forma asincrona
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    /// <summary>
+    /// Verifica mientras se escribe si el nombre de usuario cumple con los requisitos
+    /// </summary>
+    /// <param name="e"></param>
+    private void UsernameKeyUp(ChangeEventArgs e)
+    {
+        try
+        {
+            userNameValue = e?.Value?.ToString();
+
+#if (DEBUG)
+    Debug.WriteLine($"Username: {userNameValue}");
+    JS.InvokeVoidAsync("console.log", $"Username: {userNameValue}");
+#endif
+
+            if (!String.IsNullOrEmpty(userNameValue))
+            {
+                if (DataTypeValidation.checkEmailAddress(userNameValue))
+                {
+                    usernameIsValid = true;
+                    usernameErrMessage = string.Empty;
+                }
+                // else if (Rut.validar(userNameValue))
+                // {
+                //     UserName = Rut.formatRutChile(userNameValue);
+                //     usernameIsValid = true;
+                //     usernameErrMessage = string.Empty;
+                // }
+                else if (!userNameValue.Contains("@"))
+                {
+                    usernameIsValid = false;
+                    usernameErrMessage = "El nombre de usuario no es un correo electrónico válido.";
+                }
+                else
+                {
+                    usernameIsValid = false;
+                    usernameErrMessage = "El nombre de usuario no es un correo electrónico válido.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+#if (DEBUG)
+    Debug.WriteLine($"Error Username: {ex}");
+    JS.InvokeVoidAsync("console.log", $"Error Username: {ex}");
+#endif
+        }
+    }
+
+    /// <summary>
+    /// Verifica mientras se escribe si el nombre de usuario cumple con los requisitos
+    /// </summary>
+    /// <param name="e"></param>
+    private void UsernameRepeatKeyUp(ChangeEventArgs e)
+    {
+        try
+        {
+            string usernameRepeatValue = e?.Value?.ToString();
+
+#if (DEBUG)
+    Debug.WriteLine($"Username Repeat: {usernameRepeatValue}");
+    JS.InvokeVoidAsync("console.log", $"Username Repeat: {usernameRepeatValue}");
+#endif
+
+            if (!String.IsNullOrEmpty(usernameRepeatValue))
+            {
+                if (User.Email == User.EmailRepeat)
+                {
+                    usernameRepeatIsValid = true;
+                    usernameRepeatErrMessage = string.Empty;
+                }
+                else
+                {
+                    usernameRepeatIsValid = false;
+                    usernameRepeatErrMessage = "El correo electrónico no coincide.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+#if (DEBUG)
+    Debug.WriteLine($"Error Username Repeat: {ex}");
+    JS.InvokeVoidAsync("console.log", $"Error Username Repeat: {ex}");
+#endif
+        }
+    }
+
+    //// <summary>
+    /// Verifica mientras se escribe si la contraseña cumple con los requisitos
+    /// </summary>
+    /// <param name="e"></param>
+    private void PasswordKeyUp(ChangeEventArgs e)
+    {
+        try
+        {
+            passwordValue = e?.Value?.ToString();
+
+#if (DEBUG)
+    Debug.WriteLine($"Contraseña: {passwordValue}");
+    JS.InvokeVoidAsync("console.log", $"Contraseña: {passwordValue}");
+#endif
+
+            if (!String.IsNullOrEmpty(passwordValue)
+                && passwordValue.Length > 3)
+            {
+                passwordIsValid = true;
+                passwordErrMessage = string.Empty;
+            }
+            else
+            {
+                passwordIsValid = false;
+                passwordErrMessage = "La contraseña no puede ser menor a 4 caracteres.";
+            }
+        }
+        catch (Exception ex)
+        {
+#if (DEBUG)
+    Debug.WriteLine($"Error Contraseña: {ex}");
+    JS.InvokeVoidAsync("console.log", $"Error Contraseña: {ex}");
+#endif
+        }
+    }
+
+    /// <summary>
+    /// Verifica mientras se escribe si la contraseña cumple con los requisitos
+    /// </summary>
+    /// <param name="e"></param>
+    private void PasswordRepeatKeyUp(ChangeEventArgs e)
+    {
+        try
+        {
+            string passwordRepeatValue = e?.Value?.ToString();
+
+            #if (DEBUG)
+    Debug.WriteLine($"Contraseña Repetida: {passwordRepeatValue}");
+    JS.InvokeVoidAsync("console.log", $"Contraseña Repetida: {passwordRepeatValue}");
+            #endif
+
+            if (!String.IsNullOrEmpty(passwordRepeatValue)
+                && passwordRepeatValue == User.Password)
+            {
+                passwordRepeatIsValid = true;
+                passwordRepeatErrMessage = string.Empty;
+            }
+            else
+            {
+                passwordRepeatIsValid = false;
+                passwordRepeatErrMessage = "La contraseña no coincide.";
+            }
+        }
+        catch (Exception ex)
+        {
+#if (DEBUG)
+    Debug.WriteLine($"Error Contraseña: {ex}");
+    JS.InvokeVoidAsync("console.log", $"Error Contraseña: {ex}");
+#endif
+        }
+    }
+
+    private void OnSelectUserChange(ChangeEventArgs e, User user)
+    {
+        var selectedValue = e.Value.ToString();
+        Console.WriteLine($"[OnSelectUserChange]: {selectedValue}");
+
+        if (String.IsNullOrEmpty(selectedValue))
+        {
+            user.RoleId = null;
+        }
+        else
+        {
+            user.RoleId = selectedValue;
+        }
+    }
+
+
+
+
+
+
+    private async Task GetContent()
+    {
+        try
+        {
+            Authorization = await LocalStorageComponent.Get("Authorization");
+
+            if (!String.IsNullOrEmpty(Authorization))
+            {
+                await PageRedirect("/auth/login");
+            }
+
+            var response = await Http.GetAsync($"{NavigationManager.BaseUri}api/config/init/v1/setup");
+
+            try
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("console.log", jsonResponse);
+
+                try
+                {
+                    var ResponseModel = JsonConvert.DeserializeObject<ResponseGenericModel>(jsonResponse);
+
+                    if (ResponseModel.status.Equals("success", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        try
+                        {
+                            ResponseData = JsonConvert.DeserializeObject<Data>($"{ResponseModel.data}");
+                            Roles = ResponseData.Roles;
+
+                            if (ResponseData.AnyUser == true)
+                            {
+                                await PageRedirect("/auth/login");
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            //
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    await JS.InvokeVoidAsync("console.log", $"Error 0: {e}");
+                }
+            }
+            catch (Exception e)
+            {
+                await JS.InvokeVoidAsync("console.log", $"Error 1: {e}");
+            }
+        }
+        catch (Exception e)
+        {
+            await JS.InvokeVoidAsync("console.log", $"Error 2: {e}");
+        }
+
+        IsLoading = false;
+
+        StateHasChanged(); // Forzar renderizado
+    }
+
+
+    /// <summary>
+    /// Función que registrar usuario
+    /// </summary>
+    /// <returns></returns>
+    public async Task Registrar()
+    {
+        if (String.IsNullOrEmpty(User.Email))
+        {
+            usernameIsValid = false;
+            Title = "Error Usuario";
+            Message = "El nombre de usuario es obligatorio!";
+            await ModalsComponent.ShowAlertModal();
+        }
+        else if (!DataTypeValidation.checkEmailAddress(User.Email)
+                /* && !Rut.validar(UserName) */)
+        {
+            usernameIsValid = false;
+            Title = "Error Usuario";
+            Message = "El nombre de usuario no es válido!";
+            await ModalsComponent.ShowAlertModal();
+        }
+        else if (String.IsNullOrEmpty(User.Password))
+        {
+            passwordIsValid = false;
+            Title = "Error Contraseña";
+            Message = "La contraseña es obligatoria!";
+            await ModalsComponent.ShowAlertModal();
+        }
+        else if (User.Password.Length < 4)
+        {
+            passwordIsValid = false;
+            Title = "Error Usuario";
+            Message = "La contraseña no puede ser de menos de 4 caracteres!";
+            await ModalsComponent.ShowAlertModal();
+        }
+        else
+        {
+            TitleLoading = "Registrando usuario...";
+            await ModalsComponent.ShowLoadingModal(true);
+
+            List<Object> data = new List<object>();
+            var httpStatusCode = HttpStatusCode.OK;
+
+            try
+            {
+                var formData = new List<KeyValuePair<string, string>>
+                                {
+                                    new KeyValuePair<string, string>("name", User.Name),
+                                    new KeyValuePair<string, string>("email", User.Email),
+                                    new KeyValuePair<string, string>("emailrepeat", User.EmailRepeat),
+                                    new KeyValuePair<string, string>("password", User.Password),
+                                    new KeyValuePair<string, string>("passwordrepeat", User.PasswordRepeat)
+                                };
+                var content = new FormUrlEncodedContent(formData);
+
+#if (DEBUG)
+    Debug.WriteLine($"UserName: {User.Email}");
+    Debug.WriteLine($"Password: {User.Password}");
+
+    await JS.InvokeVoidAsync("console.log", $"UserName: {User.Email}");
+    await JS.InvokeVoidAsync("console.log", $"Password: {User.Password}");
+#endif
+
+                var request = new HttpRequestMessage(HttpMethod.Post, $"{NavigationManager.BaseUri}api/config/init/v1/user/register");
+                request.Headers.Add("client-ip", ClientIP);
+                request.Content = content;
+
+                var httpResponse = await Http.SendAsync(request);
+                var responseString = await httpResponse.Content.ReadAsStringAsync();
+                ResponseGenericModel = JsonConvert.DeserializeObject<ResponseGenericModel>(responseString);
+
+                Debug.WriteLine($"Response: {responseString}");
+                await JS.InvokeVoidAsync("console.log", $"Response: {responseString}");
+
+                if (ResponseGenericModel.status != StatusResponseCodes.StatusResponseSuccess)
+                {
+                    Title = ResponseGenericModel.subject;
+                    Message = ResponseGenericModel.message;
+
+                    await JS.InvokeVoidAsync("alert", $"Error: {Message}");
+                }
+                else
+                {
+                    Title = ResponseGenericModel.subject;
+                    Message = ResponseGenericModel.message;
+
+                    await PageRedirect("/auth/login");
+                }
+            }
+            catch (Exception e)
+            {
+                Title = "Error";
+                Message = "Se produjo un error inesperado. Por favor intentelo nuevamente.";
+
+                Debug.WriteLine($"Error: {e}");
+                await JS.InvokeVoidAsync("console.log", $"Error: {e}");
+            }
+
+            await Task.Delay(1000);
+            await ModalsComponent.ShowLoadingModal(false);
+            await JS.InvokeVoidAsync("closeAllModal");
+        }
+    }
+
+    /// <summary>
+    /// Redirecciona tras validar el inicio de sesión
+    /// </summary>
+    /// <param name="redirectUrl"></param>
+    /// <returns></returns>
+    public async Task PageRedirect(string redirectUrl)
+    {
+        await JS.InvokeVoidAsync("closeAllModal", null);
+        NavigationManager.NavigateTo(redirectUrl);
+    }
+
+
+
+
+    public class Data
+    {
+        [JsonProperty("any")]
+        public bool AnyUser;
+
+        [JsonProperty("roles")]
+        public List<Role> Roles;
+    }
+}

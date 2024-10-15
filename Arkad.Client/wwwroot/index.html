@@ -60,8 +60,9 @@
             var currentUrl = window.location.pathname;
 
             // Evitar redirección en la página de login y en URLs que inician con "/error"
-            if (value === null && currentUrl !== '/auth/login' && !currentUrl.startsWith('/error')) {
-                window.location.href = '/auth/login';
+            if (value === null && currentUrl !== '/auth/login' && currentUrl !== '/config/init' && !currentUrl.startsWith('/error')) {
+                //window.location.href = '/auth/login';
+                window.location.href = '/config/init';
             }
         });
     </script>

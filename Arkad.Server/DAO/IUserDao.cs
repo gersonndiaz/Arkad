@@ -7,6 +7,8 @@ namespace Arkad.Server.DAO
         #region User
         User GetById(string id);
         User GetByEmail(string email);
+        bool AnyActive();
+        bool Save(User user);
         bool Update(User user);
         bool Update(User user, History history, HistoryUser historyUser);
         #endregion User
