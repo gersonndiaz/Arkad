@@ -10,6 +10,16 @@
 		<FileVersion>1.0.0</FileVersion>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <None Remove="Database\ArkadDB.db" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="Database\ArkadDB.db">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Arkad.RunApp\Arkad.RunApp.csproj" />
     <ProjectReference Include="..\Arkad.Shared\Arkad.Shared.csproj" />
