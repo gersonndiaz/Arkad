@@ -12,6 +12,7 @@ namespace Arkad.Server.DAO
         List<Period> GetAll(int limit, int offset, string search, bool? active);
         int Count(string search, bool? active);
         bool Save(Period period, History history, HistoryPeriod historyPeriod);
+        bool Save(Period period, History history, HistoryPeriod historyPeriod, List<Expense> expenses, ExpenseControl control, History historyc, HistoryExpenseControl historyControl);
         bool Update(Period period, History history, HistoryPeriod historyPeriod);
         bool Update(Period period, History history, HistoryPeriod historyPeriod, Period periodPrev, History historyPrev, HistoryPeriod historyPeriodPrev);
         #endregion Period

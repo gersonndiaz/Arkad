@@ -544,6 +544,8 @@ namespace Arkad.Server.Areas.Expense.Controllers
                         #region Items
                         if (jItems is not null)
                         {
+                            int pos = 1;
+
                             foreach (var mItem in jItems)
                             {
                                 var item = itemDao.GetById(mItem.Id);
@@ -555,7 +557,7 @@ namespace Arkad.Server.Areas.Expense.Controllers
                                     expense.Id = Guid.NewGuid().ToString();
                                     expense.Value = 0;
                                     expense.Explanation = null;
-                                    expense.position = 1;
+                                    expense.position = pos;
                                     expense.CreatedDate = DateTime.Now;
                                     expense.ModifiedDate = DateTime.Now;
                                     expense.Active = true;
@@ -563,6 +565,7 @@ namespace Arkad.Server.Areas.Expense.Controllers
                                     expense.PeriodId = periodCurrent.Id;
                                     expense.UserId = user.Id;
 
+                                    pos++;
 
                                     string jItem = JsonConvert.SerializeObject(mItem);
                                     string jPeriod = JsonConvert.SerializeObject(periodCurrent);

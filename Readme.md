@@ -2,7 +2,11 @@
 
 Arkad es un proyecto creado con Blazor Webassembly sobre .NET 8 y SQLite, con la finalidad de ofrecer a sus usuarios la posibilidad de llevar un registro básico de sus gastos.
 
-  
+
+## Descargas
+
+* **Windows** : [Arkad.Setup.exe](Installer/Output/Arkad.Setup.exe)
+
 
 ## Autores ✒️
 

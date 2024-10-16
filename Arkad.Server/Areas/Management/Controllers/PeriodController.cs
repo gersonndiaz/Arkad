@@ -1,12 +1,10 @@
-﻿using Arkad.Server.DAO;
-using Arkad.Server.DAO.Impl;
+﻿using Arkad.Server.DAO.Impl;
 using Arkad.Server.Helpers;
 using Arkad.Server.Models;
 using Arkad.Shared;
 using Hefesto.Response;
 using Hefesto.Validation;
 using Mapster;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NLog;
@@ -247,11 +245,13 @@ namespace Arkad.Server.Areas.Management.Controllers
                     int month = Int32.Parse(sMonth);
 
                     #region DAO
+                    ItemDao itemDao = new ItemDao();
                     PeriodDao periodDao = new PeriodDao();
                     UserDao userDao = new UserDao();
                     #endregion DAO
 
                     #region DTO
+                    var items = itemDao.GetAll(true);
                     var periodAux = periodDao.GetByYearMonth(year, month);
                     User user = userDao.GetById(userId);
                     var role = (user is not null) ? userDao.GetRoleById(user.RoleId) : null;
@@ -346,7 +346,97 @@ namespace Arkad.Server.Areas.Management.Controllers
                             UserId = user.Id
                         };
 
-                        bool success = periodDao.Save(period, history, historyPeriod);
+                        #region Crear Control de Gastos
+                        List<Models.Expense> expenses = null;
+                        List<Shared.Models.Expense> expensesAux = null;
+
+                        if (items is not null && items.Any(x => x.Monthly))
+                        {
+                            expenses = new List<Models.Expense>();
+                            expensesAux = new List<Shared.Models.Expense>();
+
+                            int pos = 1;
+                            foreach (var item in items)
+                            {
+                                if (item.Monthly)
+                                {
+                                    Models.Expense expense = new Models.Expense();
+                                    expense.Id = Guid.NewGuid().ToString();
+                                    expense.Value = 0;
+                                    expense.Explanation = null;
+                                    expense.position = pos;
+                                    expense.CreatedDate = DateTime.Now;
+                                    expense.ModifiedDate = DateTime.Now;
+                                    expense.Active = true;
+                                    expense.ItemId = item.Id;
+                                    expense.PeriodId = period.Id;
+                                    expense.UserId = user.Id;
+
+                                    expenses.Add(expense);
+
+                                    pos++;
+
+                                    var mItem = item.Adapt<Shared.Models.Item>();
+                                    string jItem = JsonConvert.SerializeObject(mItem);
+                                    string jPeriod = JsonConvert.SerializeObject(period);
+                                    string jUser = JsonConvert.SerializeObject(user);
+
+                                    var vItem = JsonConvert.DeserializeObject<Shared.Models.Item>(jItem);
+                                    var vPeriod = JsonConvert.DeserializeObject<Shared.Models.Period>(jPeriod);
+                                    var vUser = JsonConvert.DeserializeObject<Shared.Models.User>(jUser);
+                                    vUser.Password = null;
+
+                                    var mExpense = expense.Adapt<Shared.Models.Expense>();
+                                    mExpense.Item = vItem;
+                                    mExpense.Period = vPeriod;
+                                    mExpense.User = vUser;
+
+                                    expensesAux.Add(mExpense);
+                                }
+                            }
+                        }
+
+                        ExpenseControl expenseControl = null;
+                        if (expenses is not null)
+                        {
+                            expenseControl = new ExpenseControl();
+                            expenseControl.Id = Guid.NewGuid().ToString();
+                            expenseControl.Data = JsonConvert.SerializeObject(expensesAux);
+                            expenseControl.Explanation = $"Control de Gastos [{period.Year}/{period.Month.ToString("D2")}]";
+                            expenseControl.Finished = false;
+                            expenseControl.CreatedDate = DateTime.Now;
+                            expenseControl.ModifiedDate = DateTime.Now;
+                            expenseControl.Active = true;
+                            expenseControl.PeriodId = period.Id;
+                            expenseControl.UserId = user.Id;
+                        }
+
+                        History historyControl = new()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Explanation = $"[{TagUtil.TAG_HISTORIAL_CREAR}]",
+                            Description = $"Se ha registrado nueva información",
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true
+                        };
+
+                        HistoryExpenseControl historyExpenseControl = new()
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Data = JsonConvert.SerializeObject(expenseControl),
+                            CreatedDate = DateTime.Now,
+                            ModifiedDate = DateTime.Now,
+                            Active = true,
+                            HistoryId = historyControl.Id,
+                            ExpenseControlId = expenseControl?.Id,
+                            UserId = user.Id
+                        };
+                        #endregion Crear Control de Gastos
+
+                        bool success = (expenseControl is not null) 
+                                            ? periodDao.Save(period, history, historyPeriod, expenses, expenseControl, historyControl, historyExpenseControl)
+                                            : periodDao.Save(period, history, historyPeriod);
 
                         if (success)
                         {

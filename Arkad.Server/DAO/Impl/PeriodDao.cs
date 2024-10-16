@@ -301,6 +301,107 @@ namespace Arkad.Server.DAO.Impl
             return success;
         }
 
+        public bool Save(Period period, History history, HistoryPeriod historyPeriod, List<Expense> expenses, ExpenseControl control, History historyc, HistoryExpenseControl historyControl)
+        {
+            bool success = false;
+
+            try
+            {
+                #region TRANSACCION
+                using (var dbContextTransaction = appDbContext.Database.BeginTransaction())
+                {
+                    try
+                    {
+                        #region Period
+                        appDbContext.Periods.Attach(period);
+                        appDbContext.Entry(period).State = EntityState.Added;
+                        success = (appDbContext.SaveChanges() > 0) ? true : false;
+                        #endregion Period
+
+                        #region History
+                        if (success)
+                        {
+                            appDbContext.Histories.Attach(history);
+                            appDbContext.Entry(history).State = EntityState.Added;
+                            success = (appDbContext.SaveChanges() > 0) ? true : false;
+
+                            if (success)
+                            {
+                                appDbContext.HistoryPeriods.Attach(historyPeriod);
+                                appDbContext.Entry(historyPeriod).State = EntityState.Added;
+                                success = (appDbContext.SaveChanges() > 0) ? true : false;
+                            }
+                        }
+                        #endregion History
+
+                        #region Control
+                        #region Expenses
+                        if (expenses != null && expenses.Count > 0)
+                        {
+                            int countErr = 0;
+                            foreach (var expense in expenses)
+                            {
+                                appDbContext.Expenses.Attach(expense);
+                                appDbContext.Entry(expense).State = EntityState.Added;
+                                countErr += appDbContext.SaveChanges() > 0 ? 0 : 1;
+                            }
+
+                            success = countErr > 0 ? false : true;
+                        }
+                        #endregion Expenses
+
+                        #region Expense Control
+                        bool existControl = appDbContext.ExpensesControl.Any(x => x.Id == control.Id);
+                        appDbContext.ExpensesControl.Attach(control);
+                        appDbContext.Entry(control).State = (existControl) ? EntityState.Modified : EntityState.Added;
+                        success = (appDbContext.SaveChanges() > 0) ? true : false;
+                        #endregion Expense Control
+
+                        #region History
+                        if (success)
+                        {
+                            appDbContext.Histories.Attach(historyc);
+                            appDbContext.Entry(historyc).State = EntityState.Added;
+                            success = (appDbContext.SaveChanges() > 0) ? true : false;
+
+                            if (success)
+                            {
+                                appDbContext.HistoryExpensesControl.Attach(historyControl);
+                                appDbContext.Entry(historyControl).State = EntityState.Added;
+                                success = (appDbContext.SaveChanges() > 0) ? true : false;
+                            }
+                        }
+                        #endregion History
+                        #endregion Control
+                    }
+                    catch (Exception e)
+                    {
+                        success = false;
+                        logger.Error($"{TAG} -- {e}");
+                    }
+
+                    #region COMMIT OR ROLLBACK TRANSACTION
+                    if (success)
+                    {
+                        dbContextTransaction.Commit();
+                    }
+                    else
+                    {
+                        dbContextTransaction.Rollback();
+                    }
+                    #endregion
+                }
+                #endregion TRANSACCION
+            }
+            catch (Exception e)
+            {
+                success = false;
+                logger.Error($"{TAG} -- {e}");
+            }
+
+            return success;
+        }
+
         /// <summary>
         /// Actualiza un period
         /// </summary>

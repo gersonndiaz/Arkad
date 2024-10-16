@@ -32,7 +32,8 @@ namespace Arkad.Server.Areas.Config.Controllers
 
         [HttpGet("v1/setup")]
         [Produces("application/json")]
-        public async Task<ResponseGenericModel> Setup()
+        //public async Task<ResponseGenericModel> Setup()
+        public IActionResult Setup()
         {
             ResponseGenericModel response = new ResponseGenericModel();
             var httpStatusCode = HttpStatusCode.OK;
@@ -51,6 +52,11 @@ namespace Arkad.Server.Areas.Config.Controllers
                 bool userActive = userDao.AnyActive();
                 var roles = userDao.GetRoles(true);
                 #endregion DTO
+
+                //if (userActive)
+                //{
+                //    return Redirect("/auth/login");
+                //}
 
                 var vRoles = (roles is not null)
                                     ? roles.Adapt<List<Arkad.Shared.Models.Role>>()
@@ -81,7 +87,7 @@ namespace Arkad.Server.Areas.Config.Controllers
             }
 
             this.HttpContext.Response.StatusCode = httpStatusCode.GetHashCode();
-            return response;
+            return StatusCode(httpStatusCode.GetHashCode(), response);
         }
 
         [HttpPost("v1/user/register")]

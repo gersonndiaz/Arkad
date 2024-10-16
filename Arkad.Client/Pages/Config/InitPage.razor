@@ -355,7 +355,7 @@ else
 
             if (!String.IsNullOrEmpty(usernameRepeatValue))
             {
-                if (User.Email == User.EmailRepeat)
+                if (User.Email == usernameRepeatValue)
                 {
                     usernameRepeatIsValid = true;
                     usernameRepeatErrMessage = string.Empty;

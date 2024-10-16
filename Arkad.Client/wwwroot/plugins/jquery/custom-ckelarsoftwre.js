@@ -160,6 +160,8 @@ function closeAllModal() {
     if ($('.modal.show').length === 0) {
         $('body').removeClass('modal-open');
     }
+
+    cleanUpBackdrops();
 }
 
 function openModal(id) {
